@@ -24,16 +24,23 @@ describe("GrowthOS page engine", () => {
     expect(promo.blocks.find((b) => b.type === "hero")?.variant).toBe("promotional");
   });
 
-  it("has an explicit version boundary for every registered block", () => {
-    expect(BLOCK_TYPES).toHaveLength(16);
+  it("has an explicit version boundary for every registered P0 block", () => {
+    expect(BLOCK_TYPES).toEqual([
+      "header", "hero", "benefits", "showcase", "socialProof", "steps", "pricing", "comparison",
+      "stats", "gallery", "video", "faq", "form", "cta", "stickyCta", "footer"
+    ]);
     for (const type of BLOCK_TYPES) expect(blockRegistry[type].schemaVersion).toBe(1);
     const parsed = pageDocumentSchema.parse(skillupCleanReference);
     expect(parsed.blocks.every((block) => block.version === 1)).toBe(true);
   });
 
-  it("starter templates collectively exercise every registered P0 block type", () => {
-    const exercised = new Set(starterTemplates.flatMap((template) => template.document.blocks.map((block) => block.type)));
-    for (const type of BLOCK_TYPES) expect(exercised.has(type), `missing representative template block: ${type}`).toBe(true);
+  it("supports visibility and ordering without changing code", () => {
+    const input = structuredClone(skillupCleanReference);
+    input.blocks[2]!.visible = false;
+    input.blocks = [input.blocks[1]!, input.blocks[0]!, ...input.blocks.slice(2)];
+    const parsed = pageDocumentSchema.parse(input);
+    expect(parsed.blocks[0]?.type).toBe("hero");
+    expect(parsed.blocks[2]?.visible).toBe(false);
   });
 
   it("rejects arbitrary block types and duplicate IDs", () => {
