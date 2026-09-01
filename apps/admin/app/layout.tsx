@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "@growth-os/page-engine/styles.css";
 import "./globals.css";
+import "./publishing.css";
 
 export const metadata: Metadata = {
   title: "GrowthOS Admin",

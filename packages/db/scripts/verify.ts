@@ -13,5 +13,7 @@ try {
   if (!skillup || skillup.hostname !== "skillup.localhost" || skillup.page_slug !== "ai-games") throw new Error("SkillUp host/page seed verification failed");
   const [offer] = await sql<{ amount: string }[]>`SELECT recurring_amount::text AS amount FROM offer_versions WHERE id='00000000-0000-4000-8000-000000000021'`; if (!offer || offer.amount !== "599.00") throw new Error("SkillUp offer verification failed");
   const constraint = await sql<{ constraint_name: string }[]>`SELECT constraint_name FROM information_schema.table_constraints WHERE table_name='page_publications' AND constraint_name='page_publications_version_belongs_to_page_fk'`; if (constraint.length !== 1) throw new Error("Publication/version ownership constraint is missing");
-  console.log(`Verified ${requiredTables.length} tables and two-brand domain/publication resolution data`);
+  const seoColumn = await sql<{ column_name: string }[]>`SELECT column_name FROM information_schema.columns WHERE table_name='landing_pages' AND column_name='draft_seo'`; if (seoColumn.length !== 1) throw new Error("landing_pages.draft_seo migration is missing");
+  const migrations = await sql<{ version: string }[]>`SELECT version FROM growthos_schema_migrations ORDER BY version`; if (!migrations.some((row) => row.version === "0002_page_draft_seo")) throw new Error("Expected 0002_page_draft_seo migration to be recorded");
+  console.log(`Verified ${requiredTables.length} tables, ordered migrations and two-brand domain/publication resolution data`);
 } finally { await sql.end(); }
