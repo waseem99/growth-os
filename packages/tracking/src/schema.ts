@@ -63,6 +63,7 @@ export const conversionInputSchema = z.object({
   brandId: z.string().uuid(),
   campaignId: uuidNullable,
   pageId: z.string().uuid(),
+  versionId: z.string().uuid(),
   variantId: uuidNullable,
   sessionId: z.string().trim().min(8).max(160).nullable().optional(),
   value: z.coerce.number().nonnegative().max(1_000_000_000).nullable().optional(),
