@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       campaignId: context.campaignId,
       pageId: context.pageId,
       versionId: context.versionId,
-      variantId: parsed.data.variantId ?? null,
+      variantId: context.variantId,
       creativeId: parsed.data.creativeId ?? null,
       sessionId: parsed.data.sessionId,
       anonymousId: parsed.data.anonymousId,
