@@ -45,10 +45,10 @@ try {
       AND properties->>'seeded'='true'
       AND coalesce(properties->>'testTraffic','false') <> 'true'`;
   const [testTraffic] = await sql<{ events: string; variant_id: string | null }[]>`
-    SELECT count(*)::text AS events, min(variant_id)::text AS variant_id FROM analytics_events
+    SELECT count(*)::text AS events, min(variant_id::text) AS variant_id FROM analytics_events
     WHERE page_id='00000000-0000-4000-8000-000000000050' AND properties->>'seeded'='true' AND properties->>'testTraffic'='true'`;
   const [seedConversions] = await sql<{ subscriptions: string; revenue: string; currency: string; variant_id: string | null }[]>`
-    SELECT count(*) FILTER (WHERE event_name='subscription_started')::text AS subscriptions, coalesce(sum(value),0)::text AS revenue, min(currency) AS currency, min(variant_id)::text AS variant_id
+    SELECT count(*) FILTER (WHERE event_name='subscription_started')::text AS subscriptions, coalesce(sum(value),0)::text AS revenue, min(currency) AS currency, min(variant_id::text) AS variant_id
     FROM conversions WHERE page_id='00000000-0000-4000-8000-000000000050' AND properties->>'seeded'='true' AND coalesce(properties->>'testTraffic','false') <> 'true'`;
   if (!seedEvents || seedEvents.landing_views !== "1" || seedEvents.sessions !== "1" || seedEvents.cta_clicks !== "1" || seedEvents.signup_starts !== "1" || seedEvents.checkout_starts !== "1" || seedEvents.control_variant_events !== "4") throw new Error("Seed production analytics event funnel does not reconcile");
   if (!testTraffic || testTraffic.events !== "1" || testTraffic.variant_id !== "00000000-0000-4000-8000-000000000902") throw new Error("Seed experiment test traffic is not isolated on variant B");
