@@ -8,12 +8,13 @@ export type Permission =
   | "pages:manage"
   | "assets:manage"
   | "integrations:manage"
-  | "analytics:view";
+  | "analytics:view"
+  | "ai:use";
 
 const permissionMatrix: Record<GrowthRole, ReadonlySet<Permission>> = {
-  owner: new Set(["users:manage", "brands:manage", "campaigns:manage", "pages:manage", "assets:manage", "integrations:manage", "analytics:view"]),
-  admin: new Set(["users:manage", "brands:manage", "campaigns:manage", "pages:manage", "assets:manage", "integrations:manage", "analytics:view"]),
-  editor: new Set(["campaigns:manage", "pages:manage", "assets:manage", "analytics:view"]),
+  owner: new Set(["users:manage", "brands:manage", "campaigns:manage", "pages:manage", "assets:manage", "integrations:manage", "analytics:view", "ai:use"]),
+  admin: new Set(["users:manage", "brands:manage", "campaigns:manage", "pages:manage", "assets:manage", "integrations:manage", "analytics:view", "ai:use"]),
+  editor: new Set(["campaigns:manage", "pages:manage", "assets:manage", "analytics:view", "ai:use"]),
   analyst: new Set(["analytics:view"])
 };
 
