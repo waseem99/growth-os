@@ -46,6 +46,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run db:migrate
+      - name: Production-safe schema verification
+        run: npm run db:verify:schema
       - run: npm run db:seed
       - run: npm run db:verify
       - run: npm run build
