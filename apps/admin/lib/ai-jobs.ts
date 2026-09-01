@@ -34,6 +34,8 @@ export async function completeAiJob(jobId: string, input: {
   latencyMs: number;
   usage?: AiUsage;
   metadata: Record<string, unknown>;
+  targetType?: string;
+  targetId?: string;
 }) {
   const { db, client } = getDatabase();
   try {
@@ -42,6 +44,8 @@ export async function completeAiJob(jobId: string, input: {
       model: input.model,
       status: "completed",
       completedAt: new Date(),
+      targetType: input.targetType,
+      targetId: input.targetId,
       metadata: json({ ...input.metadata, latencyMs: input.latencyMs, usage: input.usage ?? null })
     }).where(eq(aiJobs.id, jobId));
   } finally { await client.end(); }
