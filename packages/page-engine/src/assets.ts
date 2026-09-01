@@ -9,6 +9,18 @@ function clear(value: unknown, key?: string): unknown {
   return value;
 }
 
+function collect(value: unknown, ids: Set<string>, key?: string) {
+  if (key && isAssetKey(key) && typeof value === "string") { ids.add(value); return; }
+  if (Array.isArray(value)) { for (const entry of value) collect(entry, ids); return; }
+  if (value && typeof value === "object") for (const [childKey, childValue] of Object.entries(value as Record<string, unknown>)) collect(childValue, ids, childKey);
+}
+
 export function clearAssetReferences(document: PageDocument): PageDocument {
   return pageDocumentSchema.parse(clear(document));
+}
+
+export function collectAssetIds(document: PageDocument): string[] {
+  const ids = new Set<string>();
+  collect(document, ids);
+  return [...ids];
 }
