@@ -17,6 +17,8 @@ type TrackingContext = {
   pageId: string;
   versionId: string;
   variantId?: string | null;
+  experimentId?: string | null;
+  testTraffic?: boolean;
   defaultUtm?: Record<string, unknown> | null;
 };
 
@@ -78,6 +80,10 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
     const anonymousId = stableId(localStorage, ANONYMOUS_KEY);
     const sessionId = stableId(sessionStorage, SESSION_KEY);
     const utm = eventUtmFields(attribution);
+    const experimentProperties = {
+      experimentId: context.experimentId ?? null,
+      testTraffic: context.testTraffic === true
+    };
 
     const emit = (eventName: AnalyticsEventInput["eventName"], properties: Record<string, unknown> = {}) => send({
       eventId: crypto.randomUUID(),
@@ -96,7 +102,7 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
       campaignName: utm.campaignName,
       term: utm.term,
       content: utm.content,
-      properties: { ...properties, firstTouch: attribution.firstTouch, lastTouch: attribution.lastTouch }
+      properties: { ...properties, ...experimentProperties, firstTouch: attribution.firstTouch, lastTouch: attribution.lastTouch }
     });
 
     for (const anchor of document.querySelectorAll<HTMLAnchorElement>("a[href]")) {
@@ -111,6 +117,12 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
         if (utm.term && !url.searchParams.has("utm_term")) url.searchParams.set("utm_term", utm.term);
         if (utm.content && !url.searchParams.has("utm_content")) url.searchParams.set("utm_content", utm.content);
         if (utm.creativeId && !url.searchParams.has("creative_id")) url.searchParams.set("creative_id", utm.creativeId);
+        if (context.experimentId) url.searchParams.set("growthos_experiment_id", context.experimentId);
+        if (context.variantId) url.searchParams.set("growthos_variant_id", context.variantId);
+        url.searchParams.set("growthos_page_id", context.pageId);
+        url.searchParams.set("growthos_version_id", context.versionId);
+        url.searchParams.set("growthos_session_id", sessionId);
+        if (context.testTraffic) url.searchParams.set("growthos_test", "1");
         anchor.href = url.toString();
       } catch {
         // Leave malformed/non-URL CTA values untouched; page schema/publish validation owns those.
@@ -176,7 +188,7 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
       document.removeEventListener("ended", video, true);
       window.removeEventListener("growthos:event", custom);
     };
-  }, [context.brandId, context.campaignId, context.defaultUtm, context.pageId, context.variantId, context.versionId]);
+  }, [context.brandId, context.campaignId, context.defaultUtm, context.experimentId, context.pageId, context.testTraffic, context.variantId, context.versionId]);
 
   return null;
 }
