@@ -21,5 +21,21 @@ try {
   const uniqueConstraints = await sql<{ table_name: string; definition: string }[]>`SELECT conrelid::regclass::text AS table_name, pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE contype='u' AND conrelid IN ('analytics_events'::regclass, 'conversions'::regclass)`;
   if (!uniqueConstraints.some((row) => row.table_name === "analytics_events" && row.definition.includes("event_id"))) throw new Error("analytics_events.event_id uniqueness is missing");
   if (!uniqueConstraints.some((row) => row.table_name === "conversions" && row.definition.includes("idempotency_key"))) throw new Error("conversions.idempotency_key uniqueness is missing");
-  console.log(`Verified ${requiredTables.length} tables, ordered migrations, analytics context/idempotency and two-brand domain/publication resolution data`);
+
+  const [seedEvents] = await sql<{ landing_views: string; sessions: string; cta_clicks: string; signup_starts: string; checkout_starts: string }[]>`
+    SELECT
+      count(*) FILTER (WHERE event_name='landing_view')::text AS landing_views,
+      count(DISTINCT session_id) FILTER (WHERE event_name='landing_view')::text AS sessions,
+      count(*) FILTER (WHERE event_name='cta_click')::text AS cta_clicks,
+      count(*) FILTER (WHERE event_name='signup_start')::text AS signup_starts,
+      count(*) FILTER (WHERE event_name='checkout_start')::text AS checkout_starts
+    FROM analytics_events
+    WHERE page_id='00000000-0000-4000-8000-000000000050' AND properties->>'seeded'='true'`;
+  const [seedConversions] = await sql<{ subscriptions: string; revenue: string; currency: string }[]>`
+    SELECT count(*) FILTER (WHERE event_name='subscription_started')::text AS subscriptions, coalesce(sum(value),0)::text AS revenue, min(currency) AS currency
+    FROM conversions WHERE page_id='00000000-0000-4000-8000-000000000050' AND properties->>'seeded'='true'`;
+  if (!seedEvents || seedEvents.landing_views !== "1" || seedEvents.sessions !== "1" || seedEvents.cta_clicks !== "1" || seedEvents.signup_starts !== "1" || seedEvents.checkout_starts !== "1") throw new Error("Seed analytics event funnel does not reconcile");
+  if (!seedConversions || seedConversions.subscriptions !== "1" || seedConversions.revenue !== "599.00" || seedConversions.currency !== "PKR") throw new Error("Seed analytics conversion does not reconcile");
+
+  console.log(`Verified ${requiredTables.length} tables, ordered migrations, analytics context/idempotency, two-brand publication resolution and a reconciled acquisition funnel`);
 } finally { await sql.end(); }
