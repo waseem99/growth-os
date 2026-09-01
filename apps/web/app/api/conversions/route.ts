@@ -24,9 +24,7 @@ export async function POST(request: Request) {
   const parsed = conversionInputSchema.safeParse(payload);
   if (!parsed.success) return NextResponse.json({ error: "INVALID_CONVERSION", issues: parsed.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })) }, { status: 400 });
 
-  const versionId = typeof parsed.data.properties.versionId === "string" ? parsed.data.properties.versionId : null;
-  if (!versionId) return NextResponse.json({ error: "VERSION_ID_REQUIRED_IN_PROPERTIES" }, { status: 400 });
-  const context = await verifyTrackingContext({ ...parsed.data, versionId });
+  const context = await verifyTrackingContext(parsed.data);
   if (!context) return NextResponse.json({ error: "INVALID_CONTEXT" }, { status: 400 });
 
   const { db, client } = getDatabase();
@@ -43,7 +41,7 @@ export async function POST(request: Request) {
       value: parsed.data.value == null ? null : String(parsed.data.value),
       currency: parsed.data.currency ?? null,
       attribution: parsed.data.attribution,
-      properties: parsed.data.properties
+      properties: { ...parsed.data.properties, versionId: context.versionId }
     }).onConflictDoNothing({ target: conversions.idempotencyKey }).returning({ id: conversions.id });
     return NextResponse.json({ accepted: true, duplicate: !inserted }, { status: inserted ? 201 : 200 });
   } finally {
