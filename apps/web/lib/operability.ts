@@ -47,13 +47,14 @@ export async function reportError(event: string, error: unknown, context: LogCon
 export async function checkRateLimit(input: { namespace: string; key: string; limit: number; windowSeconds: number }) {
   const now = Date.now();
   const windowMs = input.windowSeconds * 1_000;
-  const bucket = new Date(Math.floor(now / windowMs) * windowMs);
+  const bucketEpoch = Math.floor(now / windowMs) * windowMs;
+  const bucketIso = new Date(bucketEpoch).toISOString();
   const safeKey = `${input.namespace}:${input.key}`.slice(0, 300);
   const { client } = getDatabase();
   try {
     const [row] = await client<{ count: number }[]>`
       INSERT INTO rate_limit_buckets (key, bucket, count)
-      VALUES (${safeKey}, ${bucket}, 1)
+      VALUES (${safeKey}, ${bucketIso}::timestamptz, 1)
       ON CONFLICT (key, bucket)
       DO UPDATE SET count = rate_limit_buckets.count + 1
       RETURNING count`;
@@ -62,7 +63,7 @@ export async function checkRateLimit(input: { namespace: string; key: string; li
       allowed: count <= input.limit,
       limit: input.limit,
       remaining: Math.max(0, input.limit - count),
-      resetAt: new Date(bucket.getTime() + windowMs)
+      resetAt: new Date(bucketEpoch + windowMs)
     };
   } finally {
     await client.end();
