@@ -45,39 +45,71 @@ export type ExperimentResolution = {
 export async function resolveExperimentVariant(pageId: string, visitorKey: string, forcedVariantId?: string | null): Promise<ExperimentResolution | null> {
   const { client } = getDatabase();
   try {
-    const rows = await client<ExperimentRow[]>`
-      WITH active AS (
-        SELECT e.id, e.name, e.campaign_id
-        FROM experiments e
-        WHERE e.page_id=${pageId}::uuid
-          AND e.status='running'
-          AND (e.starts_at IS NULL OR e.starts_at <= now())
-          AND (e.ends_at IS NULL OR e.ends_at > now())
-        ORDER BY e.starts_at DESC NULLS LAST, e.created_at DESC
-        LIMIT 1
-      )
-      SELECT
-        active.id::text AS experiment_id,
-        active.name AS experiment_name,
-        active.campaign_id::text AS campaign_id,
-        v.id::text AS variant_id,
-        v.name AS variant_name,
-        v.allocation,
-        v.is_control,
-        pv.id::text AS version_id,
-        pv.content,
-        pv.seo,
-        ov.currency,
-        ov.initial_amount::text AS initial_amount,
-        ov.recurring_amount::text AS recurring_amount,
-        ov.billing_interval,
-        ov.trial_days,
-        ov.auto_renew
-      FROM active
-      JOIN variants v ON v.experiment_id=active.id
-      JOIN page_versions pv ON pv.id=v.page_version_id AND pv.page_id=${pageId}::uuid
-      LEFT JOIN offer_versions ov ON ov.id=pv.offer_version_id
-      ORDER BY v.created_at, v.id`;
+    const rows = forcedVariantId
+      ? await client<ExperimentRow[]>`
+          WITH selected AS (
+            SELECT e.id, e.name, e.campaign_id
+            FROM experiments e
+            JOIN variants forced ON forced.experiment_id=e.id
+            WHERE e.page_id=${pageId}::uuid AND forced.id=${forcedVariantId}::uuid
+            ORDER BY e.created_at DESC
+            LIMIT 1
+          )
+          SELECT
+            selected.id::text AS experiment_id,
+            selected.name AS experiment_name,
+            selected.campaign_id::text AS campaign_id,
+            v.id::text AS variant_id,
+            v.name AS variant_name,
+            v.allocation,
+            v.is_control,
+            pv.id::text AS version_id,
+            pv.content,
+            pv.seo,
+            ov.currency,
+            ov.initial_amount::text AS initial_amount,
+            ov.recurring_amount::text AS recurring_amount,
+            ov.billing_interval,
+            ov.trial_days,
+            ov.auto_renew
+          FROM selected
+          JOIN variants v ON v.experiment_id=selected.id
+          JOIN page_versions pv ON pv.id=v.page_version_id AND pv.page_id=${pageId}::uuid
+          LEFT JOIN offer_versions ov ON ov.id=pv.offer_version_id
+          ORDER BY v.created_at, v.id`
+      : await client<ExperimentRow[]>`
+          WITH active AS (
+            SELECT e.id, e.name, e.campaign_id
+            FROM experiments e
+            WHERE e.page_id=${pageId}::uuid
+              AND e.status='running'
+              AND (e.starts_at IS NULL OR e.starts_at <= now())
+              AND (e.ends_at IS NULL OR e.ends_at > now())
+            ORDER BY e.starts_at DESC NULLS LAST, e.created_at DESC
+            LIMIT 1
+          )
+          SELECT
+            active.id::text AS experiment_id,
+            active.name AS experiment_name,
+            active.campaign_id::text AS campaign_id,
+            v.id::text AS variant_id,
+            v.name AS variant_name,
+            v.allocation,
+            v.is_control,
+            pv.id::text AS version_id,
+            pv.content,
+            pv.seo,
+            ov.currency,
+            ov.initial_amount::text AS initial_amount,
+            ov.recurring_amount::text AS recurring_amount,
+            ov.billing_interval,
+            ov.trial_days,
+            ov.auto_renew
+          FROM active
+          JOIN variants v ON v.experiment_id=active.id
+          JOIN page_versions pv ON pv.id=v.page_version_id AND pv.page_id=${pageId}::uuid
+          LEFT JOIN offer_versions ov ON ov.id=pv.offer_version_id
+          ORDER BY v.created_at, v.id`;
     if (rows.length < 2) return null;
 
     const parsed = experimentVariantsSchema.safeParse(rows.map((row) => ({
