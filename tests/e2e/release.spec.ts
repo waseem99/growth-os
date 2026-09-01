@@ -17,7 +17,8 @@ test("published SkillUp acquisition page resolves on its configured host with pr
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "http://skillup.localhost/ai-games");
   const robots = await page.locator('meta[name="robots"]').getAttribute("content");
   expect(robots ?? "").not.toContain("noindex");
-  await expect(page.getByText(/JazzCash/i).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Start your SkillUp subscription/i })).toBeVisible();
+  await expect(page.getByText(/PKR 599/).first()).toBeVisible();
 });
 
 test("a second brand resolves independently on its configured host and path", async ({ page }) => {
@@ -33,7 +34,7 @@ test("published page remains usable at a paid-social mobile viewport", async ({ 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: /Pay Now/i }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /Continue/i }).first()).toBeVisible();
 });
 
 test("forced experiment QA uses the same canonical URL but is noindex", async ({ page }) => {
@@ -41,7 +42,7 @@ test("forced experiment QA uses the same canonical URL but is noindex", async ({
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "http://skillup.localhost/ai-games");
   const robots = await page.locator('meta[name="robots"]').getAttribute("content");
   expect(robots ?? "").toContain("noindex");
-  await expect(page.getByText(/Rancher/i).first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 }).first()).toContainText("Build practical AI skills faster");
 });
 
 test("host sitemap and robots endpoints remain available", async ({ request }) => {
