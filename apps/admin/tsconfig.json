@@ -3,7 +3,6 @@
   "compilerOptions": {
     "plugins": [{ "name": "next" }],
     "noEmit": true,
-    "baseUrl": ".",
     "paths": { "@/*": ["./*"] }
   },
   "include": [
