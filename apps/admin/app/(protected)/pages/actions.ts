@@ -4,9 +4,10 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDatabase, brands, campaigns, landingPages } from "@growth-os/db";
-import { pageDocumentSchema, type PageDocument } from "@growth-os/page-engine";
+import { clearAssetReferences, pageDocumentSchema, type PageDocument } from "@growth-os/page-engine";
 import { requirePermission } from "@/lib/user-access";
 import { instantiatePageTemplate, normalizePageSlug, reseedPageDocument } from "@/lib/page-input";
+import { syncDraftAssetUsages, validatePageAssetReferences } from "@/lib/asset-usage-db";
 
 const json = (value: unknown) => value as Record<string, unknown>;
 
@@ -52,6 +53,7 @@ export async function createPage(formData: FormData) {
   } finally {
     await client.end();
   }
+  await syncDraftAssetUsages(id, document);
   redirect(`/pages/${id}`);
 }
 
@@ -85,6 +87,8 @@ export async function savePageDraft(input: SavePageDraftInput): Promise<SavePage
   const conversionGoal = input.conversionGoal.trim().slice(0, 80);
   if (!name || !slug || !input.brandId) return { ok: false, error: "Name, slug and brand are required" };
   await assertBrandAndCampaign(input.brandId, input.campaignId);
+  const assetValidation = await validatePageAssetReferences(input.brandId, parsed.data);
+  if (!assetValidation.ok) return { ok: false, error: `Invalid or cross-brand asset reference: ${assetValidation.invalid.join(", ")}` };
   const { db, client } = getDatabase();
   try {
     const [saved] = await db.update(landingPages).set({
@@ -99,6 +103,7 @@ export async function savePageDraft(input: SavePageDraftInput): Promise<SavePage
       updatedBy: actor.id
     }).where(and(eq(landingPages.id, input.id), eq(landingPages.draftRevision, input.expectedRevision))).returning({ revision: landingPages.draftRevision });
     if (!saved) return { ok: false, error: "This page changed elsewhere. Reload before saving again." };
+    await syncDraftAssetUsages(input.id, parsed.data);
     revalidatePath("/pages");
     revalidatePath(`/pages/${input.id}`);
     return { ok: true, revision: saved.revision };
@@ -131,18 +136,20 @@ export async function duplicatePage(input: { sourceId: string; targetBrandId: st
   const actor = await requirePermission("pages:manage");
   await assertBrandAndCampaign(input.targetBrandId, input.targetCampaignId || null);
   const { db, client } = getDatabase();
-  let source: { name: string; slug: string; conversionGoal: string | null; draftContent: unknown } | undefined;
+  let source: { name: string; slug: string; brandId: string; conversionGoal: string | null; draftContent: unknown } | undefined;
   try {
-    [source] = await db.select({ name: landingPages.name, slug: landingPages.slug, conversionGoal: landingPages.conversionGoal, draftContent: landingPages.draftContent })
+    [source] = await db.select({ name: landingPages.name, slug: landingPages.slug, brandId: landingPages.brandId, conversionGoal: landingPages.conversionGoal, draftContent: landingPages.draftContent })
       .from(landingPages).where(eq(landingPages.id, input.sourceId)).limit(1);
   } finally {
     await client.end();
   }
   if (!source) throw new Error("SOURCE_PAGE_NOT_FOUND");
   const parsed = pageDocumentSchema.safeParse(source.draftContent);
-  const document: PageDocument = reseedPageDocument(parsed.success ? parsed.data : instantiatePageTemplate("minimal"));
+  const baseDocument: PageDocument = reseedPageDocument(parsed.success ? parsed.data : instantiatePageTemplate("minimal"));
+  const document = source.brandId === input.targetBrandId ? baseDocument : clearAssetReferences(baseDocument);
   const slug = await availableCopySlug(input.targetBrandId, source.slug);
   const connection = getDatabase();
+  let createdId = "";
   try {
     const [created] = await connection.db.insert(landingPages).values({
       brandId: input.targetBrandId,
@@ -155,11 +162,13 @@ export async function duplicatePage(input: { sourceId: string; targetBrandId: st
       updatedBy: actor.id
     }).returning({ id: landingPages.id });
     if (!created) throw new Error("PAGE_DUPLICATE_FAILED");
-    revalidatePath("/pages");
-    return { id: created.id };
+    createdId = created.id;
   } finally {
     await connection.client.end();
   }
+  await syncDraftAssetUsages(createdId, document);
+  revalidatePath("/pages");
+  return { id: createdId };
 }
 
 export async function archivePage(formData: FormData) {

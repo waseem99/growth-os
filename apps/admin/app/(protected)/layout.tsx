@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/auth";
 import { requireGrowthUser } from "@/lib/user-access";
+import { AssetPickerBridge } from "./asset-picker-bridge";
 
 export default async function ProtectedLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = await requireGrowthUser();
@@ -13,6 +14,7 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
         <nav aria-label="Admin navigation">
           <Link href="/">Overview</Link>
           <Link href="/pages">Landing Pages</Link>
+          <Link href="/assets">Asset Library</Link>
           {isAdmin && <Link href="/brands">Brands</Link>}
           {isAdmin && <Link href="/users">Users</Link>}
         </nav>
@@ -25,6 +27,7 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
       </header>
       <div className="user-strip"><span>{user.email}</span><strong>{user.role}</strong></div>
       {children}
+      <AssetPickerBridge />
     </div>
   );
 }
