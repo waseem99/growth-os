@@ -162,6 +162,7 @@ export const landingPages = pgTable(
     status: pageStatusEnum("status").notNull().default("draft"),
     conversionGoal: text("conversion_goal"),
     draftContent: jsonb("draft_content").$type<JsonObject>().notNull().default({}),
+    draftSeo: jsonb("draft_seo").$type<JsonObject>().notNull().default({}),
     draftRevision: integer("draft_revision").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -286,15 +287,20 @@ export const analyticsEvents = pgTable(
     sessionId: text("session_id"),
     anonymousId: text("anonymous_id"),
     userId: text("user_id"),
-    attribution: jsonb("attribution").$type<JsonObject>().notNull().default({}),
+    source: text("source"),
+    medium: text("medium"),
+    campaignName: text("campaign_name"),
+    term: text("term"),
+    content: text("content"),
     properties: jsonb("properties").$type<JsonObject>().notNull().default({}),
     receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     uniqueIndex("analytics_events_event_id_uidx").on(table.eventId),
     index("analytics_events_occurred_idx").on(table.occurredAt),
+    index("analytics_events_campaign_occurred_idx").on(table.campaignId, table.occurredAt),
     index("analytics_events_page_occurred_idx").on(table.pageId, table.occurredAt),
-    index("analytics_events_campaign_occurred_idx").on(table.campaignId, table.occurredAt)
+    index("analytics_events_variant_occurred_idx").on(table.variantId, table.occurredAt)
   ]
 );
 
