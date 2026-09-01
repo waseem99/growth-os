@@ -14,7 +14,7 @@
     "dev:admin": "npm run dev -w @growth-os/admin",
     "dev:web": "npm run dev -w @growth-os/web",
     "build": "npm run build -w @growth-os/config && npm run build -w @growth-os/admin && npm run build -w @growth-os/web",
-    "lint": "eslint apps packages tests",
+    "lint": "eslint apps packages tests --max-warnings=0",
     "typecheck": "npm run typecheck -ws --if-present",
     "test": "vitest run",
     "test:e2e": "playwright test"
@@ -24,7 +24,7 @@
     "@types/node": "26.4.0",
     "eslint": "10.9.1",
     "eslint-config-next": "16.3.4",
-    "typescript": "7.0.2",
+    "typescript": "6.0.3",
     "vitest": "4.1.11"
   }
 }
