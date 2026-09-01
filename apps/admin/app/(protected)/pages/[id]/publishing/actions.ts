@@ -18,10 +18,10 @@ import { requirePermission } from "@/lib/user-access";
 import { collectAssetReferences } from "@/lib/asset-references";
 import { validatePublishInput } from "@/lib/publish-validation";
 import { writeAudit } from "@/lib/audit";
+import { adminCorrelationId, logAdminEvent, reportAdminError } from "@/lib/operability";
 
 type ActionResult = { ok: true; message: string; versionId?: string; revision?: number } | { ok: false; error: string; findings?: Array<{ path: string; message: string }> };
 const asJson = (value: unknown) => value as Record<string, unknown>;
-const requestId = () => crypto.randomUUID();
 
 export async function saveSeoDraft(input: { pageId: string; expectedRevision: number; seo: unknown }): Promise<ActionResult> {
   const actor = await requirePermission("pages:manage");
@@ -39,7 +39,7 @@ export async function saveSeoDraft(input: { pageId: string; expectedRevision: nu
 
 export async function publishPage(input: { pageId: string; expectedRevision: number; publishNote?: string }): Promise<ActionResult> {
   const actor = await requirePermission("pages:manage");
-  const correlationId = requestId();
+  const correlationId = adminCorrelationId();
   const { db, client } = getDatabase();
   try {
     return await db.transaction(async (tx) => {
@@ -62,7 +62,19 @@ export async function publishPage(input: { pageId: string; expectedRevision: num
         return ids.filter((id) => !valid.has(id));
       })();
       const validation = validatePublishInput({ document: page.content, seo: page.seo, domainRequired: Boolean(page.domainId), domainVerified, invalidAssetIds: invalidAssets });
-      if (!validation.ok) return { ok: false as const, error: "Publication validation failed.", findings: validation.findings };
+      if (!validation.ok) {
+        await tx.insert(auditLogs).values({
+          actorUserId: actor.id,
+          action: "page.publish_rejected",
+          entityType: "landing_page",
+          entityId: page.id,
+          before: { revision: page.revision },
+          after: { reason: "validation_failed", findingCount: validation.findings.length },
+          correlationId
+        });
+        logAdminEvent("warn", "page_publish_rejected", { correlationId, pageId: page.id, findingCount: validation.findings.length });
+        return { ok: false as const, error: "Publication validation failed.", findings: validation.findings };
+      }
 
       const [latest] = await tx.select({ number: pageVersions.versionNumber }).from(pageVersions).where(eq(pageVersions.pageId, page.id)).orderBy(desc(pageVersions.versionNumber)).limit(1);
       const [currentPublication] = await tx.select({ versionId: pagePublications.versionId }).from(pagePublications).where(eq(pagePublications.pageId, page.id)).limit(1);
@@ -75,18 +87,18 @@ export async function publishPage(input: { pageId: string; expectedRevision: num
       const references = collectAssetReferences(validation.document); if (validation.seo.socialAssetId) references.push({ assetId: validation.seo.socialAssetId, fieldPath: "seo.socialAssetId" });
       if (references.length) await tx.insert(assetUsages).values(references.map((reference) => ({ assetId: reference.assetId, entityType: "page_version", entityId: version.id, fieldPath: reference.fieldPath }))).onConflictDoNothing();
       await tx.insert(auditLogs).values({ actorUserId: actor.id, action: "page.published", entityType: "landing_page", entityId: page.id, before: { versionId: currentPublication?.versionId ?? null, revision: page.revision }, after: { versionId: version.id, versionNumber: version.number, revision: page.revision + 1 }, correlationId });
-      console.info(JSON.stringify({ timestamp: new Date().toISOString(), service: "growthos-admin", level: "info", event: "page_published", correlationId, pageId: page.id, versionId: version.id }));
+      logAdminEvent("info", "page_published", { correlationId, pageId: page.id, versionId: version.id });
       revalidatePath(`/pages/${page.id}`); revalidatePath(`/pages/${page.id}/publishing`); revalidatePath("/pages");
       return { ok: true as const, message: `Published version ${version.number}.`, versionId: version.id, revision: page.revision + 1 };
     });
   } catch (error) {
-    console.error(JSON.stringify({ timestamp: new Date().toISOString(), service: "growthos-admin", level: "error", event: "page_publish_failed", correlationId, pageId: input.pageId, error: error instanceof Error ? error.message.slice(0, 500) : "UNKNOWN_ERROR" }));
+    await reportAdminError("page_publish_failed", error, { correlationId, pageId: input.pageId, actorUserId: actor.id });
     return { ok: false, error: error instanceof Error ? error.message : "Publish failed." };
   } finally { await client.end(); }
 }
 
 export async function rollbackPage(input: { pageId: string; versionId: string; expectedCurrentVersionId: string | null }): Promise<ActionResult> {
-  const actor = await requirePermission("pages:manage"); const correlationId = requestId(); const { db, client } = getDatabase();
+  const actor = await requirePermission("pages:manage"); const correlationId = adminCorrelationId(); const { db, client } = getDatabase();
   try {
     return await db.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${input.pageId}))`);
@@ -96,9 +108,13 @@ export async function rollbackPage(input: { pageId: string; versionId: string; e
       if ((current?.versionId ?? null) !== input.expectedCurrentVersionId) return { ok: false as const, error: "Published version changed elsewhere. Reload before rolling back." };
       await tx.insert(pagePublications).values({ pageId: input.pageId, versionId: target.id, publishedAt: new Date(), publishedBy: actor.id }).onConflictDoUpdate({ target: pagePublications.pageId, set: { versionId: target.id, publishedAt: new Date(), publishedBy: actor.id } });
       await tx.insert(auditLogs).values({ actorUserId: actor.id, action: "page.rolled_back", entityType: "landing_page", entityId: input.pageId, before: { versionId: current?.versionId ?? null }, after: { versionId: target.id, versionNumber: target.number }, correlationId });
+      logAdminEvent("info", "page_rolled_back", { correlationId, pageId: input.pageId, versionId: target.id });
       revalidatePath(`/pages/${input.pageId}/publishing`);
       return { ok: true as const, message: `Rolled back to version ${target.number}.`, versionId: target.id };
     });
+  } catch (error) {
+    await reportAdminError("page_rollback_failed", error, { correlationId, pageId: input.pageId, actorUserId: actor.id });
+    return { ok: false, error: error instanceof Error ? error.message : "Rollback failed." };
   } finally { await client.end(); }
 }
 
