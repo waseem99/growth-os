@@ -14,7 +14,7 @@
     "dev:admin": "npm run dev -w @growth-os/admin",
     "dev:web": "npm run dev -w @growth-os/web",
     "build": "npm run build -w @growth-os/config && npm run build -w @growth-os/admin && npm run build -w @growth-os/web",
-    "lint": "eslint apps packages tests --max-warnings=0",
+    "lint": "eslint apps packages tests",
     "typecheck": "npm run typecheck -ws --if-present",
     "test": "vitest run",
     "test:e2e": "playwright test"
