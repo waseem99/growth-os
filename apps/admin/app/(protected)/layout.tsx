@@ -4,6 +4,7 @@ import { requireGrowthUser } from "@/lib/user-access";
 
 export default async function ProtectedLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = await requireGrowthUser();
+  const isAdmin = user.role === "owner" || user.role === "admin";
 
   return (
     <div className="app-frame">
@@ -11,7 +12,8 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
         <Link className="brandmark" href="/">GrowthOS</Link>
         <nav aria-label="Admin navigation">
           <Link href="/">Overview</Link>
-          {(user.role === "owner" || user.role === "admin") && <Link href="/users">Users</Link>}
+          {isAdmin && <Link href="/brands">Brands</Link>}
+          {isAdmin && <Link href="/users">Users</Link>}
         </nav>
         <form action={async () => {
           "use server";
