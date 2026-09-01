@@ -16,6 +16,18 @@ const results = {
   totalBlockingTimeMs: auditValue("total-blocking-time")
 };
 
+const failedSeoAudits = (report.categories?.seo?.auditRefs ?? [])
+  .filter((ref) => Number(ref.weight ?? 0) > 0)
+  .map((ref) => ({ ref, audit: report.audits?.[ref.id] }))
+  .filter(({ audit }) => audit && typeof audit.score === "number" && audit.score < 1)
+  .map(({ ref, audit }) => ({
+    id: ref.id,
+    score: audit.score,
+    title: audit.title,
+    displayValue: audit.displayValue ?? null,
+    explanation: audit.explanation ?? null
+  }));
+
 const failures = [];
 if (results.performance < 90) failures.push(`Performance ${results.performance.toFixed(0)} < 90`);
 if (results.accessibility < 90) failures.push(`Accessibility ${results.accessibility.toFixed(0)} < 90`);
@@ -26,7 +38,7 @@ if (results.cls >= 0.1) failures.push(`CLS ${results.cls.toFixed(3)} >= 0.1`);
 // production INP remains a field/RUM release check documented in the runbook.
 if (results.totalBlockingTimeMs > 200) failures.push(`TBT ${results.totalBlockingTimeMs.toFixed(0)}ms > 200ms lab responsiveness budget`);
 
-console.log(JSON.stringify({ lighthouseReleaseGate: results }, null, 2));
+console.log(JSON.stringify({ lighthouseReleaseGate: results, failedSeoAudits }, null, 2));
 if (failures.length) {
   console.error(`Lighthouse release gate failed:\n- ${failures.join("\n- ")}`);
   process.exit(1);
