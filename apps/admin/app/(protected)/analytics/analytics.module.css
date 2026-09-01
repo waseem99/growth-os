@@ -1,0 +1,42 @@
+.filters { margin: 28px 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.filters label { display: grid; gap: 6px; color: #625b6d; font-size: .8rem; }
+.filters input, .filters select { min-width: 0; width: 100%; border: 1px solid #ddd7e8; border-radius: 10px; background: #fff; padding: 10px 11px; }
+.filterActions { display: flex; gap: 8px; align-items: center; }
+.filterActions a { border: 1px solid #ddd7e8; background: #fff; border-radius: 10px; padding: 11px 14px; }
+.empty { border: 1px dashed #cdc4dd; border-radius: 18px; background: #fff; padding: 28px; display: grid; gap: 7px; color: #645d70; }
+.empty strong { color: #211b2d; font-size: 1.05rem; }
+.metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 28px 0; }
+.metric { background: #fff; border: 1px solid #e4deec; border-radius: 16px; padding: 18px; display: grid; gap: 8px; }
+.metric > span { color: #756e80; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; font-weight: 800; }
+.metric strong { font-size: clamp(1.45rem, 3vw, 2.2rem); letter-spacing: -.04em; }
+.metric small { color: #7a7285; line-height: 1.4; }
+.panel { margin-top: 18px; background: #fff; border: 1px solid #e4deec; border-radius: 18px; padding: 20px; }
+.panelHeading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.panelHeading > div { display: grid; gap: 3px; }
+.panelHeading span { color: #6236ff; text-transform: uppercase; letter-spacing: .07em; font-size: .72rem; font-weight: 900; }
+.panelHeading h2 { margin: 0; font-size: 1.35rem; }
+.panelHeading small { color: #746d80; text-align: right; }
+.currencyGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.currencyGrid article { background: #f8f6fc; border: 1px solid #ebe6f2; border-radius: 13px; padding: 14px; display: grid; gap: 5px; }
+.currencyGrid span, .currencyGrid small { color: #777080; font-size: .75rem; }
+.currencyGrid strong { font-size: 1.15rem; }
+.funnel { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.funnel div { border: 1px solid #ebe6f2; background: #faf9fc; border-radius: 12px; padding: 13px; display: grid; gap: 8px; min-width: 0; }
+.funnel span { color: #746d80; font-size: .72rem; }
+.funnel strong { font-size: 1.2rem; }
+.breakdowns { display: grid; gap: 22px; }
+.breakdown h3 { margin: 0 0 8px; font-size: 1rem; }
+.table { border: 1px solid #ece7f2; border-radius: 12px; overflow: hidden; }
+.row { display: grid; grid-template-columns: minmax(180px, 1.8fr) repeat(5, minmax(90px, .8fr)); gap: 8px; align-items: center; padding: 11px 12px; border-top: 1px solid #f0ecf4; font-size: .82rem; }
+.row:first-child { border-top: 0; }
+.row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row span { color: #655f70; }
+.header { background: #f8f6fb; color: #736c7e; font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+.attributionGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.sourceList { display: grid; gap: 7px; }
+.sourceList > div { display: grid; grid-template-columns: minmax(100px, 1fr) auto auto; gap: 12px; align-items: center; border-top: 1px solid #efebf3; padding: 9px 0; font-size: .82rem; }
+.sourceList > div:first-child { border-top: 0; }
+.sourceList span { color: #726b7d; }
+.definition { color: #756e80; font-size: .78rem; line-height: 1.6; margin: 20px 0 0; }
+@media (max-width: 960px) { .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .funnel { grid-template-columns: repeat(4, minmax(0, 1fr)); } .row { grid-template-columns: minmax(150px, 1.5fr) repeat(5, minmax(78px, .8fr)); overflow-x: auto; } }
+@media (max-width: 700px) { .filters, .metrics, .attributionGrid { grid-template-columns: 1fr; } .panelHeading { align-items: flex-start; flex-direction: column; } .panelHeading small { text-align: left; } .funnel { grid-template-columns: repeat(2, minmax(0, 1fr)); } .table { overflow-x: auto; } .row { min-width: 720px; } .sourceList > div { grid-template-columns: 1fr; gap: 3px; } }
