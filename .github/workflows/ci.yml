@@ -83,7 +83,7 @@ jobs:
             exit 1
           fi
           export CHROME_PATH
-          npx --yes lighthouse@12 http://skillup.localhost:3000/ai-games \
+          npx --yes lighthouse@12.8.2 http://skillup.localhost:3000/ai-games \
             --output=json \
             --output-path=/tmp/growthos-lighthouse.json \
             --only-categories=performance,accessibility,seo \
