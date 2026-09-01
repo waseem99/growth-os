@@ -5,7 +5,9 @@ describe("GrowthOS RBAC", () => {
   it("limits analyst and editor privileges", () => {
     expect(hasPermission("analyst", "analytics:view")).toBe(true);
     expect(hasPermission("analyst", "pages:manage")).toBe(false);
+    expect(hasPermission("analyst", "ai:use")).toBe(false);
     expect(hasPermission("editor", "pages:manage")).toBe(true);
+    expect(hasPermission("editor", "ai:use")).toBe(true);
     expect(hasPermission("editor", "users:manage")).toBe(false);
     expect(hasPermission("editor", "integrations:manage")).toBe(false);
   });
