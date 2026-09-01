@@ -121,9 +121,8 @@ export async function resolveExperimentVariant(pageId: string, visitorKey: strin
     })));
     if (!parsed.success) return null;
 
-    const forced = forcedVariantId ? rows.find((row) => row.variant_id === forcedVariantId) : null;
-    const chosenInput = forced ?? chooseVariant(parsed.data, visitorKey, rows[0]!.experiment_id);
-    const chosen = rows.find((row) => row.variant_id === chosenInput.id);
+    const selectedVariantId = forcedVariantId ?? chooseVariant(parsed.data, visitorKey, rows[0]!.experiment_id).id;
+    const chosen = rows.find((row) => row.variant_id === selectedVariantId);
     if (!chosen) return null;
     return {
       experimentId: chosen.experiment_id,
