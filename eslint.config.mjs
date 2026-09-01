@@ -1,0 +1,24 @@
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTypescript from "eslint-config-next/typescript";
+
+export default defineConfig([
+  ...nextVitals,
+  ...nextTypescript,
+  {
+    settings: {
+      next: {
+        rootDir: ["apps/admin/", "apps/web/"]
+      }
+    }
+  },
+  globalIgnores([
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "**/next-env.d.ts",
+    "playwright-report/**",
+    "test-results/**"
+  ])
+]);

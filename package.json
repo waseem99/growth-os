@@ -1,0 +1,30 @@
+{
+  "name": "growth-os",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @growth-os/admin",
+    "dev:admin": "npm run dev -w @growth-os/admin",
+    "dev:web": "npm run dev -w @growth-os/web",
+    "build": "npm run build -w @growth-os/config && npm run build -w @growth-os/admin && npm run build -w @growth-os/web",
+    "lint": "eslint apps packages tests --max-warnings=0",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/node": "26.4.0",
+    "eslint": "9.28.0",
+    "eslint-config-next": "16.3.4",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11"
+  }
+}
