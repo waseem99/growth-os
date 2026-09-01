@@ -12,6 +12,7 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
         <Link className="brandmark" href="/">GrowthOS</Link>
         <nav aria-label="Admin navigation">
           <Link href="/">Overview</Link>
+          <Link href="/pages">Landing Pages</Link>
           {isAdmin && <Link href="/brands">Brands</Link>}
           {isAdmin && <Link href="/users">Users</Link>}
         </nav>

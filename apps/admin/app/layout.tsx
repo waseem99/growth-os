@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@growth-os/page-engine/styles.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
