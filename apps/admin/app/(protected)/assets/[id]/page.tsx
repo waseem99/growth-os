@@ -10,6 +10,7 @@ import { deleteAsset, replaceAssetInDrafts, updateAssetMetadata } from "../actio
 export default async function AssetDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireGrowthUser();
   const canManage = hasPermission(user.role, "assets:manage");
+  const canUseAi = hasPermission(user.role, "ai:use");
   const { id } = await params;
   const { db, client } = getDatabase();
   try {
@@ -29,7 +30,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
     const draftPageIds = [...new Set(usages.filter((usage) => usage.entityType === "landing_page_draft").map((usage) => usage.entityId))];
 
     return <main className="shell compact-shell">
-      <div className="asset-detail-heading"><div><Link href="/assets">← Asset Library</Link><p className="eyebrow">{asset.brandName} · {asset.type}</p><h1>{asset.title || meta.originalName || "Untitled asset"}</h1><code>{asset.id}</code></div><div className="asset-detail-preview">{asset.type === "video" ? <video src={asset.storageKey} controls preload="metadata" /> : <a href={asset.storageKey} target="_blank" rel="noreferrer">Open stored asset</a>}</div></div>
+      <div className="asset-detail-heading"><div><Link href="/assets">← Asset Library</Link><p className="eyebrow">{asset.brandName} · {asset.type}</p><h1>{asset.title || meta.originalName || "Untitled asset"}</h1><code>{asset.id}</code>{canUseAi ? <Link className="ai-inline-link" href={`/assets/${id}/ai`}>AI metadata assistant →</Link> : null}</div><div className="asset-detail-preview">{asset.type === "video" ? <video src={asset.storageKey} controls preload="metadata" /> : <a href={asset.storageKey} target="_blank" rel="noreferrer">Open stored asset</a>}</div></div>
 
       <div className="asset-detail-grid">
         <section className="settings-card">
