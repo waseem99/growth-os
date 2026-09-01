@@ -4,13 +4,12 @@ import { notFound } from "next/navigation";
 import { PageRenderer, pageDocumentSchema, pageSeoSchema, type BrandRenderTheme } from "@growth-os/page-engine";
 import { resolvePublishedPage } from "../../lib/brand-resolution";
 import { resolvePageAssets } from "../../lib/page-assets";
+import { canonicalFor } from "../../lib/public-seo";
 import { renderPublicMedia } from "../public-media";
 
 export const revalidate = 60;
 
 type RouteProps = { params: Promise<{ slug: string[] }> };
-
-const originFor = (hostname: string) => `${hostname === "localhost" || hostname.endsWith(".localhost") ? "http" : "https"}://${hostname}`;
 
 async function getRoutePage(params: RouteProps["params"]) {
   const { slug } = await params;
@@ -23,7 +22,7 @@ export async function generateMetadata({ params }: RouteProps): Promise<Metadata
   if (!page) return { title: "Not found", robots: { index: false, follow: false } };
   const seo = pageSeoSchema.safeParse(page.seo);
   if (!seo.success) return { title: page.pageName, robots: { index: false, follow: false } };
-  const canonical = seo.data.canonicalUrl ?? `${originFor(page.hostname)}/${page.slug}`;
+  const canonical = canonicalFor(seo.data, page.hostname, page.slug);
   const parsed = pageDocumentSchema.safeParse(page.content);
   const socialId = seo.data.socialAssetId ?? page.defaultSocialAssetId;
   const assetMap = parsed.success ? await resolvePageAssets(parsed.data, [socialId]) : new Map();
