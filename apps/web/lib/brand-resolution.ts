@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
-import { brands, domains, getDatabase, landingPages, offerVersions, pagePublications, pageVersions } from "@growth-os/db";
+import { brands, campaigns, domains, getDatabase, landingPages, offerVersions, pagePublications, pageVersions } from "@growth-os/db";
 
 export function normalizeRequestHost(value: string | null) {
   if (!value) return "";
@@ -37,6 +37,7 @@ async function resolvePublishedPageUncached(host: string, slug: string) {
       defaultSocialAssetId: brands.defaultSocialAssetId,
       pageId: landingPages.id,
       campaignId: landingPages.campaignId,
+      campaignUtmDefaults: campaigns.utmDefaults,
       pageName: landingPages.name,
       slug: landingPages.slug,
       content: pageVersions.content,
@@ -54,6 +55,7 @@ async function resolvePublishedPageUncached(host: string, slug: string) {
       .innerJoin(landingPages, and(eq(landingPages.brandId, brands.id), eq(landingPages.domainId, domains.id)))
       .innerJoin(pagePublications, eq(pagePublications.pageId, landingPages.id))
       .innerJoin(pageVersions, eq(pageVersions.id, pagePublications.versionId))
+      .leftJoin(campaigns, eq(campaigns.id, landingPages.campaignId))
       .leftJoin(offerVersions, eq(offerVersions.id, pageVersions.offerVersionId))
       .where(and(eq(domains.hostname, normalized), eq(domains.status, "verified"), eq(brands.status, "active"), eq(landingPages.status, "draft"), eq(landingPages.slug, normalizedSlug)))
       .limit(1);
@@ -72,7 +74,7 @@ async function resolvePublishedPageUncached(host: string, slug: string) {
   } finally { await client.end(); }
 }
 
-export const resolvePublishedPage = unstable_cache(resolvePublishedPageUncached, ["growthos-published-page-v1"], { revalidate: 60 });
+export const resolvePublishedPage = unstable_cache(resolvePublishedPageUncached, ["growthos-published-page-v2"], { revalidate: 60 });
 
 export async function listPublishedPagesForHost(host: string) {
   const normalized = normalizeRequestHost(host);

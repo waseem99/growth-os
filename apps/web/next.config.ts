@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  transpilePackages: ["@growth-os/config", "@growth-os/db", "@growth-os/page-engine"],
+  transpilePackages: ["@growth-os/config", "@growth-os/db", "@growth-os/page-engine", "@growth-os/tracking"],
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
