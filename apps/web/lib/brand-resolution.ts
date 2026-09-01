@@ -66,7 +66,7 @@ async function resolvePublishedPageUncached(host: string, slug: string) {
         recurringAmount: row.recurringAmount,
         billingInterval: row.billingInterval,
         trialDays: row.trialDays,
-        autoRenew: row.autoRenew
+        autoRenew: row.autoRenew ?? false
       } : undefined
     };
   } finally { await client.end(); }
