@@ -25,7 +25,7 @@ Never expose this value in browser code, landing-page JSON, integration `publicC
   "campaignId": "00000000-0000-4000-8000-000000000030",
   "pageId": "00000000-0000-4000-8000-000000000050",
   "versionId": "00000000-0000-4000-8000-000000000051",
-  "variantId": null,
+  "variantId": "00000000-0000-4000-8000-000000000901",
   "sessionId": "optional-first-party-session-id",
   "value": 599,
   "currency": "PKR",
@@ -50,7 +50,9 @@ Never expose this value in browser code, landing-page JSON, integration `publicC
     }
   },
   "properties": {
-    "plan": "premium"
+    "plan": "premium",
+    "experimentId": "00000000-0000-4000-8000-000000000900",
+    "testTraffic": false
   }
 }
 ```
@@ -59,15 +61,26 @@ Allowed conversion names are `signup_complete`, `purchase` and `subscription_sta
 
 ## Context validation
 
-GrowthOS does not trust client-supplied brand/campaign relationships. The endpoint verifies that `versionId` belongs to `pageId`, that the page belongs to `brandId`, and that any supplied `campaignId` matches the page's campaign. The authoritative IDs are then stored.
+GrowthOS does not trust client-supplied brand/campaign/experiment relationships. The endpoint verifies that `versionId` belongs to `pageId`, that the page belongs to `brandId`, and that any supplied `campaignId` matches the page's campaign. If `variantId` is supplied, GrowthOS also verifies that the variant belongs to an experiment for that page **and** points to the supplied immutable `versionId`. Only the verified IDs are stored.
 
 ## Idempotency
 
 `idempotencyKey` must be stable for one logical downstream outcome. Re-sending the same key is safe: the first accepted request returns HTTP 201 and subsequent duplicates return HTTP 200 with `{ "accepted": true, "duplicate": true }`.
 
-## Attribution relay
+## Attribution and experiment relay
 
-The landing-page tracker persists first/last touch using first-party browser storage and decorates navigational HTTP(S) links with non-PII UTM/creative parameters. A downstream application should preserve those parameters in its own first-party session and send the resulting first/last-touch envelope with the conversion. Do not place email, phone, names, payment data or other unnecessary PII in UTM parameters or GrowthOS analytics properties.
+The landing-page tracker persists first/last touch using first-party browser storage and decorates navigational HTTP(S) links with non-PII acquisition context. In addition to ordinary `utm_*` and `creative_id` parameters, experiment-aware links can include:
+
+- `growthos_page_id`
+- `growthos_version_id`
+- `growthos_variant_id`
+- `growthos_experiment_id`
+- `growthos_session_id`
+- `growthos_test=1` for explicitly forced QA traffic
+
+A downstream application should preserve those values in its own first-party session and return `pageId`, `versionId`, `variantId` and `sessionId` in the conversion payload. When `growthos_test=1` is present, propagate `properties.testTraffic=true`; GrowthOS analytics excludes that traffic from production experiment reporting.
+
+Do not place email, phone, names, payment data or other unnecessary PII in UTM parameters, experiment relay parameters or GrowthOS analytics properties.
 
 For same-page/client flows, custom funnel events can be emitted without coupling application code to the tracker implementation:
 
