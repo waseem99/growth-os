@@ -79,6 +79,7 @@ export const pageDocumentSchema = z.object({
   }
 });
 
+export type PageDocumentInput = z.input<typeof pageDocumentSchema>;
 export type PageDocument = z.infer<typeof pageDocumentSchema>;
 export type PageBlock = z.infer<typeof pageBlockSchema>;
 export type OfferSnapshot = { currency: string; initialAmount?: string | null; recurringAmount?: string | null; billingInterval?: string | null; trialDays?: number | null; autoRenew?: boolean };
