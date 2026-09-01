@@ -14,9 +14,12 @@ try {
   const [offer] = await sql<{ amount: string }[]>`SELECT recurring_amount::text AS amount FROM offer_versions WHERE id='00000000-0000-4000-8000-000000000021'`; if (!offer || offer.amount !== "599.00") throw new Error("SkillUp offer verification failed");
   const constraint = await sql<{ constraint_name: string }[]>`SELECT constraint_name FROM information_schema.table_constraints WHERE table_name='page_publications' AND constraint_name='page_publications_version_belongs_to_page_fk'`; if (constraint.length !== 1) throw new Error("Publication/version ownership constraint is missing");
   const seoColumn = await sql<{ column_name: string }[]>`SELECT column_name FROM information_schema.columns WHERE table_name='landing_pages' AND column_name='draft_seo'`; if (seoColumn.length !== 1) throw new Error("landing_pages.draft_seo migration is missing");
-  const migrations = await sql<{ version: string }[]>`SELECT version FROM growthos_schema_migrations ORDER BY version`; if (!migrations.some((row) => row.version === "0002_page_draft_seo")) throw new Error("Expected 0002_page_draft_seo migration to be recorded");
-  const uniqueIndexes = await sql<{ indexname: string }[]>`SELECT indexname FROM pg_indexes WHERE schemaname='public' AND indexname IN ('analytics_events_event_id_uidx','conversions_idempotency_uidx')`;
-  const uniqueNames = new Set(uniqueIndexes.map((row) => row.indexname));
-  if (!uniqueNames.has("analytics_events_event_id_uidx") || !uniqueNames.has("conversions_idempotency_uidx")) throw new Error("Analytics/conversion idempotency indexes are missing");
-  console.log(`Verified ${requiredTables.length} tables, ordered migrations, analytics idempotency and two-brand domain/publication resolution data`);
+  const trackingColumns = await sql<{ column_name: string }[]>`SELECT column_name FROM information_schema.columns WHERE table_name='analytics_events' AND column_name IN ('source','medium','campaign_name','term','content')`;
+  if (trackingColumns.length !== 5) throw new Error("analytics_events UTM context migration is incomplete");
+  const migrations = await sql<{ version: string }[]>`SELECT version FROM growthos_schema_migrations ORDER BY version`;
+  if (!migrations.some((row) => row.version === "0002_page_draft_seo") || !migrations.some((row) => row.version === "0003_tracking_context")) throw new Error("Expected ordered GrowthOS migrations are not recorded");
+  const uniqueConstraints = await sql<{ table_name: string; definition: string }[]>`SELECT conrelid::regclass::text AS table_name, pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE contype='u' AND conrelid IN ('analytics_events'::regclass, 'conversions'::regclass)`;
+  if (!uniqueConstraints.some((row) => row.table_name === "analytics_events" && row.definition.includes("event_id"))) throw new Error("analytics_events.event_id uniqueness is missing");
+  if (!uniqueConstraints.some((row) => row.table_name === "conversions" && row.definition.includes("idempotency_key"))) throw new Error("conversions.idempotency_key uniqueness is missing");
+  console.log(`Verified ${requiredTables.length} tables, ordered migrations, analytics context/idempotency and two-brand domain/publication resolution data`);
 } finally { await sql.end(); }
