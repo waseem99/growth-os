@@ -119,8 +119,8 @@ export function providerFromEnv(env: NodeJS.ProcessEnv = process.env): AiProvide
 
 export function jsonSchemaFor(schema: ZodType): Record<string, unknown> {
   const generated = z.toJSONSchema(schema) as Record<string, unknown>;
-  const { $schema: _ignored, ...jsonSchema } = generated;
-  return jsonSchema;
+  delete generated.$schema;
+  return generated;
 }
 
 export async function generateValidated<T>(provider: AiProvider | null, input: {
