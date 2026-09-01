@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       brandId: context.brandId,
       campaignId: context.campaignId,
       pageId: context.pageId,
-      variantId: parsed.data.variantId ?? null,
+      variantId: context.variantId,
       sessionId: parsed.data.sessionId ?? null,
       value: parsed.data.value == null ? null : String(parsed.data.value),
       currency: parsed.data.currency ?? null,
