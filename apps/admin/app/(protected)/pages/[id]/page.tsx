@@ -3,12 +3,13 @@ import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { brands, campaigns, getDatabase, landingPages } from "@growth-os/db";
 import { pageDocumentSchema, type BrandRenderTheme } from "@growth-os/page-engine";
+import { hasPermission } from "@/lib/authz";
 import { requireGrowthUser } from "@/lib/user-access";
 import { instantiatePageTemplate } from "@/lib/page-input";
 import { PageEditor } from "../page-editor";
 
 export default async function PageEditorRoute({ params }: { params: Promise<{ id: string }> }) {
-  await requireGrowthUser();
+  const user = await requireGrowthUser();
   const { id } = await params;
   const { db, client } = getDatabase();
   try {
@@ -33,7 +34,7 @@ export default async function PageEditorRoute({ params }: { params: Promise<{ id
     const parsed = pageDocumentSchema.safeParse(page.draftContent);
     const document = parsed.success ? parsed.data : instantiatePageTemplate("minimal");
     return <>
-      <div className="page-lifecycle-strip"><span>Draft revision {page.draftRevision}</span><div><Link href={`/preview/pages/${id}`} target="_blank">Preview draft ↗</Link><Link href={`/pages/${id}/publishing`}>Publishing & versions →</Link></div></div>
+      <div className="page-lifecycle-strip"><span>Draft revision {page.draftRevision}</span><div><Link href={`/preview/pages/${id}`} target="_blank">Preview draft ↗</Link>{hasPermission(user.role, "ai:use") ? <Link href={`/pages/${id}/ai`}>AI assistant →</Link> : null}<Link href={`/pages/${id}/publishing`}>Publishing & versions →</Link></div></div>
       <PageEditor
         initial={{
           id: page.id,
