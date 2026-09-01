@@ -24,8 +24,10 @@ export async function generateMetadata({ params }: RouteProps): Promise<Metadata
   const seo = pageSeoSchema.safeParse(page.seo);
   if (!seo.success) return { title: page.pageName, robots: { index: false, follow: false } };
   const canonical = seo.data.canonicalUrl ?? `${originFor(page.hostname)}/${page.slug}`;
-  const assetMap = await resolvePageAssets(pageDocumentSchema.safeParse(page.content).success ? pageDocumentSchema.parse(page.content) : { schemaVersion: 1, templateKey: "invalid", stylePreset: "minimal", blocks: [] } as never, [seo.data.socialAssetId ?? page.defaultSocialAssetId]);
-  const social = assetMap.get(seo.data.socialAssetId ?? page.defaultSocialAssetId ?? "");
+  const parsed = pageDocumentSchema.safeParse(page.content);
+  const socialId = seo.data.socialAssetId ?? page.defaultSocialAssetId;
+  const assetMap = parsed.success ? await resolvePageAssets(parsed.data, [socialId]) : new Map();
+  const social = assetMap.get(socialId ?? "");
   return {
     title: seo.data.title,
     description: seo.data.description,
@@ -37,7 +39,7 @@ export async function generateMetadata({ params }: RouteProps): Promise<Metadata
       title: seo.data.socialTitle || seo.data.title,
       description: seo.data.socialDescription || seo.data.description,
       siteName: page.brandName,
-      images: social ? [{ url: social.url, width: social.width ?? undefined, height: social.height ?? undefined, alt: social.altText ?? seo.data.socialTitle || seo.data.title }] : undefined
+      images: social ? [{ url: social.url, width: social.width ?? undefined, height: social.height ?? undefined, alt: social.altText ?? (seo.data.socialTitle || seo.data.title) }] : undefined
     },
     twitter: {
       card: social ? "summary_large_image" : "summary",
