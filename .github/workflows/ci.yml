@@ -28,6 +28,9 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgres://growthos:growthos@localhost:5432/growthos
+      AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
+      GOOGLE_CLIENT_ID: ci-google-client-id
+      GOOGLE_CLIENT_SECRET: ci-google-client-secret
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
