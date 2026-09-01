@@ -64,8 +64,9 @@ export default async function AssetsPage({ searchParams }: { searchParams: Searc
         {visible.map((asset) => {
           const meta = parseAssetMetadata(asset.metadata);
           const count = usageCount.get(asset.id) ?? 0;
+          const isVisual = asset.type !== "video";
           return <Link className="asset-card" href={`/assets/${asset.id}`} key={asset.id}>
-            <div className="asset-preview">{asset.type === "video" ? <span>VIDEO</span> : <img src={asset.storageKey} alt={asset.altText ?? ""} loading="lazy" />}</div>
+            <div className="asset-preview" role={isVisual ? "img" : undefined} aria-label={isVisual ? asset.altText || asset.title || "Asset preview" : undefined} style={isVisual ? { backgroundImage: `url(${JSON.stringify(asset.storageKey)})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>{asset.type === "video" ? <span>VIDEO</span> : null}</div>
             <div className="asset-card-body"><div><strong>{asset.title || meta.originalName || "Untitled asset"}</strong><span>{asset.brandName} · {asset.type}</span></div><code>{asset.id}</code><p>{asset.width && asset.height ? `${asset.width}×${asset.height} · ` : ""}{asset.fileSize ? `${Math.round(asset.fileSize / 1024)} KB · ` : ""}{count} usage{count === 1 ? "" : "s"}</p>{meta.tags?.length ? <div className="tag-row">{meta.tags.slice(0, 4).map((tag) => <span key={tag}>{tag}</span>)}</div> : null}</div>
           </Link>;
         })}
