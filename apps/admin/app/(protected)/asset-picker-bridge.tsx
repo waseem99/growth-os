@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type PickerAsset = { id: string; title: string | null; type: string; brandId: string; brandName: string; storageKey: string; altText: string | null };
@@ -42,7 +43,7 @@ export function AssetPickerBridge() {
     <div className="asset-picker-head"><div><strong>Select Asset Library item</strong><span>The page stores the stable asset ID, not its Blob URL.</span></div><button type="button" onClick={() => setActive(null)}>×</button></div>
     <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search assets…" />
     <div className="asset-picker-results">{loading ? <p>Loading assets…</p> : visible.map((asset) => <button type="button" key={asset.id} onClick={() => { setReactInputValue(active, asset.id); setActive(null); }}><span className="asset-picker-thumb">{asset.type === "video" ? "VIDEO" : asset.type.toUpperCase()}</span><span><strong>{asset.title || "Untitled asset"}</strong><small>{asset.brandName} · {asset.type}</small><code>{asset.id}</code></span></button>)}</div>
-    {!loading && visible.length === 0 ? <p>No matching assets. <a href="/assets">Upload one in Asset Library.</a></p> : null}
-    <div className="asset-picker-foot"><button type="button" onClick={() => { setReactInputValue(active, ""); setActive(null); }}>Clear field</button><a href="/assets" target="_blank" rel="noreferrer">Open Asset Library</a></div>
+    {!loading && visible.length === 0 ? <p>No matching assets. <Link href="/assets">Upload one in Asset Library.</Link></p> : null}
+    <div className="asset-picker-foot"><button type="button" onClick={() => { setReactInputValue(active, ""); setActive(null); }}>Clear field</button><Link href="/assets" target="_blank" rel="noreferrer">Open Asset Library</Link></div>
   </div>;
 }
