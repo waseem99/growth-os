@@ -2,7 +2,7 @@
 
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import {
   applyBlockRewrite,
   applyCopyVariant,
@@ -113,6 +113,7 @@ export async function runPageAi(formData: FormData) {
     } else throw new Error("UNKNOWN_AI_ACTION");
     redirect(`/pages/${pageId}/ai?job=${jobId}`);
   } catch (error) {
+    unstable_rethrow(error);
     await failAiJob(jobId, error);
     const message = error instanceof Error && error.message === "AI_NOT_CONFIGURED" ? "AI provider is not configured; quality check remains available" : "Suggestion failed; the draft was not changed";
     redirect(`/pages/${pageId}/ai?error=${encodeURIComponent(message)}`);
