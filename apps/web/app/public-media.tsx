@@ -3,7 +3,7 @@ import type { MediaRenderInput } from "@growth-os/page-engine";
 import type { PublicAsset } from "../lib/page-assets";
 
 export function renderPublicMedia(assetMap: Map<string, PublicAsset>) {
-  return ({ assetId, alt, className, loading }: MediaRenderInput) => {
+  return function GrowthPublicMedia({ assetId, alt, className, loading }: MediaRenderInput) {
     const asset = assetMap.get(assetId);
     if (!asset) return <span className="go-media-placeholder" data-asset-id={assetId}>{alt || "Media unavailable"}</span>;
     if (asset.type === "video") return <video className={className} controls playsInline preload="metadata" aria-label={alt || asset.altText || "Campaign video"}><source src={asset.url} type={asset.mimeType} /></video>;
