@@ -1,6 +1,6 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import Google from "next-auth/providers/google";
-import { findAllowedUser } from "@/lib/user-access";
+import { findAllowedUser } from "@/lib/user-repository";
 import type { GrowthRole, GrowthUserStatus } from "@/lib/authz";
 
 declare module "next-auth" {
@@ -13,13 +13,12 @@ declare module "next-auth" {
   }
 }
 
-declare module "next-auth/jwt" {
-  interface JWT {
-    growthUserId?: string;
-    growthRole?: GrowthRole;
-    growthStatus?: GrowthUserStatus;
-  }
-}
+type GrowthToken = {
+  email?: string | null;
+  growthUserId?: string;
+  growthRole?: GrowthRole;
+  growthStatus?: GrowthUserStatus;
+} & Record<string, unknown>;
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID ?? "missing-google-client-id";
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET ?? "missing-google-client-secret";
@@ -37,24 +36,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return Boolean(allowed && allowed.status === "active");
     },
     async jwt({ token }) {
-      if (!token.email) return token;
-      const allowed = await findAllowedUser(token.email);
+      const growthToken = token as GrowthToken;
+      if (!growthToken.email) return token;
+      const allowed = await findAllowedUser(growthToken.email);
       if (!allowed) {
-        token.growthUserId = undefined;
-        token.growthRole = undefined;
-        token.growthStatus = "disabled";
+        growthToken.growthUserId = undefined;
+        growthToken.growthRole = undefined;
+        growthToken.growthStatus = "disabled";
         return token;
       }
-      token.growthUserId = allowed.id;
-      token.growthRole = allowed.role;
-      token.growthStatus = allowed.status;
+      growthToken.growthUserId = allowed.id;
+      growthToken.growthRole = allowed.role;
+      growthToken.growthStatus = allowed.status;
       return token;
     },
     async session({ session, token }) {
+      const growthToken = token as GrowthToken;
       if (session.user) {
-        session.user.id = token.growthUserId ?? "";
-        session.user.role = token.growthRole ?? "analyst";
-        session.user.status = token.growthStatus ?? "disabled";
+        session.user.id = growthToken.growthUserId ?? "";
+        session.user.role = growthToken.growthRole ?? "analyst";
+        session.user.status = growthToken.growthStatus ?? "disabled";
       }
       return session;
     }
