@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@growth-os/analytics": "*",
     "@growth-os/config": "*",
     "@growth-os/db": "*",
     "@growth-os/page-engine": "*",
