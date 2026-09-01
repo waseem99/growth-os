@@ -85,7 +85,7 @@ export async function applyPageAiSuggestion(formData: FormData) {
     if (job.action === "rewrite_block") { const parsed = blockRewriteSuggestionSchema.parse(output); const blockId = String(metadata.blockId ?? ""); document = pageDocumentSchema.parse({ ...document, blocks: document.blocks.map((block) => block.id === blockId ? applyBlockRewrite(block, parsed) : block) }); }
     else if (job.action === "generate_variants") document = applyCopyVariant(document, copyVariantsSuggestionSchema.parse(output), variantIndex);
     else if (job.action === "suggest_seo") seo = applySeoSuggestion(seo, seoSuggestionSchema.parse(output));
-    else if (job.action === "suggest_faq") document = applyFaqSuggestion(document, faqSuggestionSchema.parse(output);
+    else if (job.action === "suggest_faq") document = applyFaqSuggestion(document, faqSuggestionSchema.parse(output));
     else throw new Error("AI_JOB_HAS_NO_APPLY_ACTION");
 
     const [updated] = await db.update(landingPages).set({ draftContent: json(document), draftSeo: json(seo), draftRevision: page.revision + 1, updatedAt: new Date(), updatedBy: actor.id }).where(and(eq(landingPages.id, pageId), eq(landingPages.draftRevision, page.revision))).returning({ revision: landingPages.draftRevision });
