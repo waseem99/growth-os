@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { PageSeo } from "@growth-os/page-engine";
@@ -43,7 +44,7 @@ export function PublishPanel({ pageId, initialRevision, initialSeo, versions, cu
       <label>Publish note<textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Optional change summary" /></label>
       <button className="primary-button" type="button" disabled={pending} onClick={() => run(() => publishPage({ pageId, expectedRevision: revision, publishNote: note }))}>Publish immutable version</button>
       {currentVersionId ? <button type="button" disabled={pending} onClick={() => run(() => unpublishPage({ pageId, expectedCurrentVersionId: currentVersionId }))}>Unpublish</button> : null}
-      <a className="preview-link" href={`/preview/pages/${pageId}`} target="_blank" rel="noreferrer">Open secure draft preview ↗</a>
+      <Link className="preview-link" href={`/preview/pages/${pageId}`} target="_blank" rel="noreferrer">Open secure draft preview ↗</Link>
       {message ? <div className="publish-message">{message}</div> : null}
       {findings.length ? <div className="validation"><strong>Publication blockers</strong>{findings.map((finding, index) => <div key={`${finding.path}-${index}`}><code>{finding.path}</code> {finding.message}</div>)}</div> : null}
     </section>
