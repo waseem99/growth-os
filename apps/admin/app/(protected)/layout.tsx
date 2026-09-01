@@ -9,6 +9,7 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
   const isAdmin = user.role === "owner" || user.role === "admin";
   const canManageCampaigns = hasPermission(user.role, "campaigns:manage");
   const canManageIntegrations = hasPermission(user.role, "integrations:manage");
+  const canViewAnalytics = hasPermission(user.role, "analytics:view");
 
   return (
     <div className="app-frame">
@@ -18,6 +19,7 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
           <Link href="/">Overview</Link>
           <Link href="/pages">Landing Pages</Link>
           {canManageCampaigns && <Link href="/campaigns">Campaigns</Link>}
+          {canViewAnalytics && <Link href="/analytics">Analytics</Link>}
           <Link href="/assets">Asset Library</Link>
           {isAdmin && <Link href="/brands">Brands</Link>}
           {canManageIntegrations && <Link href="/integrations">Integrations</Link>}
