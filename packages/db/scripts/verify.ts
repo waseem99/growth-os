@@ -15,5 +15,8 @@ try {
   const constraint = await sql<{ constraint_name: string }[]>`SELECT constraint_name FROM information_schema.table_constraints WHERE table_name='page_publications' AND constraint_name='page_publications_version_belongs_to_page_fk'`; if (constraint.length !== 1) throw new Error("Publication/version ownership constraint is missing");
   const seoColumn = await sql<{ column_name: string }[]>`SELECT column_name FROM information_schema.columns WHERE table_name='landing_pages' AND column_name='draft_seo'`; if (seoColumn.length !== 1) throw new Error("landing_pages.draft_seo migration is missing");
   const migrations = await sql<{ version: string }[]>`SELECT version FROM growthos_schema_migrations ORDER BY version`; if (!migrations.some((row) => row.version === "0002_page_draft_seo")) throw new Error("Expected 0002_page_draft_seo migration to be recorded");
-  console.log(`Verified ${requiredTables.length} tables, ordered migrations and two-brand domain/publication resolution data`);
+  const uniqueIndexes = await sql<{ indexname: string }[]>`SELECT indexname FROM pg_indexes WHERE schemaname='public' AND indexname IN ('analytics_events_event_id_uidx','conversions_idempotency_uidx')`;
+  const uniqueNames = new Set(uniqueIndexes.map((row) => row.indexname));
+  if (!uniqueNames.has("analytics_events_event_id_uidx") || !uniqueNames.has("conversions_idempotency_uidx")) throw new Error("Analytics/conversion idempotency indexes are missing");
+  console.log(`Verified ${requiredTables.length} tables, ordered migrations, analytics idempotency and two-brand domain/publication resolution data`);
 } finally { await sql.end(); }
