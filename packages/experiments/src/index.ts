@@ -27,7 +27,7 @@ export function stableBucket(visitorKey: string, experimentId: string) {
   return (hash >>> 0) % 10_000;
 }
 
-export function chooseVariant(variants: readonly ExperimentVariantInput[], visitorKey: string, experimentId: string) {
+export function chooseVariant(variants: readonly ExperimentVariantInput[], visitorKey: string, experimentId: string): ExperimentVariantInput {
   const parsed = experimentVariantsSchema.parse(variants);
   const bucket = stableBucket(visitorKey, experimentId) / 100;
   let cursor = 0;
@@ -35,7 +35,9 @@ export function chooseVariant(variants: readonly ExperimentVariantInput[], visit
     cursor += variant.allocation;
     if (bucket < cursor) return variant;
   }
-  return parsed.find((variant) => variant.isControl) ?? parsed[0];
+  const fallback = parsed.find((variant) => variant.isControl) ?? parsed.at(0);
+  if (!fallback) throw new Error("EXPERIMENT_HAS_NO_VARIANTS");
+  return fallback;
 }
 
 export function controlVariant(variants: readonly ExperimentVariantInput[]) {
