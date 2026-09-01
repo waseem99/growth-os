@@ -1,4 +1,4 @@
-import { collectAssetIds, pageDocumentSchema, pageSeoSchema, type PageDocument, type PageSeo } from "@growth-os/page-engine";
+import { collectAssetIds, pageDocumentSchema, pageSeoSchema, type PageDocument } from "@growth-os/page-engine";
 import { qualityReportSchema, type QualityReport } from "./contracts";
 
 export type QualityAsset = { id: string; title?: string | null; altText?: string | null };
