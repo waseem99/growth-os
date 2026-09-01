@@ -61,6 +61,6 @@ export default async function PublishedPage({ params }: RouteProps) {
   return <>
     {structuredData ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} /> : null}
     <PageRenderer document={parsed.data} theme={page.theme as BrandRenderTheme} offer={page.offer} renderMedia={renderPublicMedia(assetMap)} />
-    <GrowthTracker context={{ brandId: page.brandId, campaignId: page.campaignId, pageId: page.pageId, versionId: page.versionId }} />
+    <GrowthTracker context={{ brandId: page.brandId, campaignId: page.campaignId, pageId: page.pageId, versionId: page.versionId, defaultUtm: page.campaignUtmDefaults }} />
   </>;
 }
