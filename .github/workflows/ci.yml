@@ -20,23 +20,24 @@ jobs:
           node-version: 24
       - run: npm install --no-audit --no-fund
       - name: Lint
+        run: npm run lint
+      - name: Typecheck
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set +e
-          npm run lint 2>&1 | tee lint.log
+          npm run typecheck 2>&1 | tee typecheck.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ] && [ "${{ github.event_name }}" = "pull_request" ]; then
             {
-              echo '### Temporary CI lint diagnostic (TS6)'
+              echo '### Temporary CI typecheck diagnostic'
               echo '```text'
-              head -120 lint.log
+              head -160 typecheck.log
               echo '```'
-            } > lint-comment.md
-            gh pr comment "${{ github.event.pull_request.number }}" --body-file lint-comment.md
+            } > typecheck-comment.md
+            gh pr comment "${{ github.event.pull_request.number }}" --body-file typecheck-comment.md
           fi
           exit "$status"
-      - run: npm run typecheck
       - run: npm test
       - run: npm run build
