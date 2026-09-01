@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { brands, campaigns, getDatabase, landingPages } from "@growth-os/db";
@@ -31,23 +32,26 @@ export default async function PageEditorRoute({ params }: { params: Promise<{ id
     ]);
     const parsed = pageDocumentSchema.safeParse(page.draftContent);
     const document = parsed.success ? parsed.data : instantiatePageTemplate("minimal");
-    return <PageEditor
-      initial={{
-        id: page.id,
-        name: page.name,
-        slug: page.slug,
-        brandId: page.brandId,
-        campaignId: page.campaignId,
-        conversionGoal: page.conversionGoal ?? "subscription",
-        revision: page.draftRevision,
-        status: page.status,
-        document
-      }}
-      brands={brandRows}
-      campaigns={campaignRows}
-      theme={page.brandTheme as BrandRenderTheme}
-      recoveredInvalidDraft={!parsed.success}
-    />;
+    return <>
+      <div className="page-lifecycle-strip"><span>Draft revision {page.draftRevision}</span><div><Link href={`/preview/pages/${id}`} target="_blank">Preview draft ↗</Link><Link href={`/pages/${id}/publishing`}>Publishing & versions →</Link></div></div>
+      <PageEditor
+        initial={{
+          id: page.id,
+          name: page.name,
+          slug: page.slug,
+          brandId: page.brandId,
+          campaignId: page.campaignId,
+          conversionGoal: page.conversionGoal ?? "subscription",
+          revision: page.draftRevision,
+          status: page.status,
+          document
+        }}
+        brands={brandRows}
+        campaigns={campaignRows}
+        theme={page.brandTheme as BrandRenderTheme}
+        recoveredInvalidDraft={!parsed.success}
+      />
+    </>;
   } finally {
     await client.end();
   }
