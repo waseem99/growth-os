@@ -1,7 +1,7 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import {
   aiPageBriefSchema,
   composeGeneratedPage,
@@ -105,6 +105,7 @@ export async function generateAiPageDraft(formData: FormData) {
     });
     redirect(`/pages/${pageId}?created=ai`);
   } catch (error) {
+    unstable_rethrow(error);
     await failAiJob(jobId, error);
     const code = error instanceof Error && error.message === "AI_NOT_CONFIGURED" ? "AI is not configured yet; manual page creation still works" : "AI generation failed; no draft was changed";
     redirect(`/ai?error=${encodeURIComponent(code)}`);
