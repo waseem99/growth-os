@@ -2,18 +2,13 @@
   "name": "growth-os",
   "version": "0.1.0",
   "private": true,
-  "engines": {
-    "node": ">=24.0.0"
-  },
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "engines": { "node": ">=24.0.0" },
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "npm run dev -w @growth-os/admin",
     "dev:admin": "npm run dev -w @growth-os/admin",
     "dev:web": "npm run dev -w @growth-os/web",
-    "build": "npm run build -w @growth-os/config && npm run build -w @growth-os/db && npm run build -w @growth-os/admin && npm run build -w @growth-os/web",
+    "build": "npm run build -w @growth-os/config && npm run build -w @growth-os/db && npm run build -w @growth-os/page-engine && npm run build -w @growth-os/admin && npm run build -w @growth-os/web",
     "lint": "eslint apps packages tests --max-warnings=0",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",

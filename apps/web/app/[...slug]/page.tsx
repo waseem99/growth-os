@@ -1,16 +1,10 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { PageRenderer, pageDocumentSchema, type BrandRenderTheme, type OfferSnapshot } from "@growth-os/page-engine";
 import { resolvePublishedPage } from "../../lib/brand-resolution";
 
-const field = (obj: unknown, key: string, fallback: string) => typeof obj === "object" && obj !== null && typeof (obj as Record<string, unknown>)[key] === "string" ? String((obj as Record<string, unknown>)[key]) : fallback;
-
 export default async function PublishedPage({ params }: { params: Promise<{ slug: string[] }> }) {
-  const { slug } = await params;
-  const host = (await headers()).get("host") ?? "";
-  const page = await resolvePublishedPage(host, slug.join("/"));
-  if (!page) notFound();
-  const primary = field(page.theme, "primary", "#6236ff");
-  const background = field(page.theme, "background", "#ffffff");
-  const text = field(page.theme, "text", "#101014");
-  return <main style={{ background, color: text }}><section><p className="eyebrow" style={{ color: primary }}>{page.brandName}</p><h1>{page.pageName}</h1><p>Published version {page.versionNumber} is resolved from the active domain, brand and immutable publication pointer.</p></section></main>;
+  const { slug } = await params; const host = (await headers()).get("host") ?? ""; const page = await resolvePublishedPage(host, slug.join("/")); if (!page) notFound();
+  const parsed = pageDocumentSchema.safeParse(page.content); if (!parsed.success) return <main><section><p className="eyebrow">{page.brandName}</p><h1>Page configuration needs migration.</h1><p>This publication predates the active GrowthOS page schema.</p></section></main>;
+  return <PageRenderer document={parsed.data} theme={page.theme as BrandRenderTheme} offer={(page as unknown as { offer?: OfferSnapshot }).offer} />;
 }
