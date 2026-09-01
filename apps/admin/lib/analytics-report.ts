@@ -52,6 +52,7 @@ async function summarizePeriod(filters: AnalyticsFilters): Promise<DerivedMetric
         FROM analytics_events ae
         LEFT JOIN campaigns camp ON camp.id=ae.campaign_id
         WHERE ae.occurred_at >= ${filters.from} AND ae.occurred_at < ${filters.to}
+          AND coalesce(ae.properties->>'testTraffic','false') <> 'true'
           AND (${brandId}::uuid IS NULL OR ae.brand_id=${brandId}::uuid)
           AND (${campaignId}::uuid IS NULL OR ae.campaign_id=${campaignId}::uuid)
           AND (${pageId}::uuid IS NULL OR ae.page_id=${pageId}::uuid)
@@ -67,6 +68,7 @@ async function summarizePeriod(filters: AnalyticsFilters): Promise<DerivedMetric
         FROM conversions conv
         LEFT JOIN campaigns camp ON camp.id=conv.campaign_id
         WHERE conv.occurred_at >= ${filters.from} AND conv.occurred_at < ${filters.to}
+          AND coalesce(conv.properties->>'testTraffic','false') <> 'true'
           AND (${brandId}::uuid IS NULL OR conv.brand_id=${brandId}::uuid)
           AND (${campaignId}::uuid IS NULL OR conv.campaign_id=${campaignId}::uuid)
           AND (${pageId}::uuid IS NULL OR conv.page_id=${pageId}::uuid)
@@ -122,6 +124,7 @@ async function breakdown(filters: AnalyticsFilters): Promise<AnalyticsBreakdown[
           LEFT JOIN landing_pages lp ON lp.id=ae.page_id
           LEFT JOIN variants v ON v.id=ae.variant_id
           WHERE ae.occurred_at >= ${filters.from} AND ae.occurred_at < ${filters.to}
+            AND coalesce(ae.properties->>'testTraffic','false') <> 'true'
             AND (${brandId}::uuid IS NULL OR ae.brand_id=${brandId}::uuid)
             AND (${campaignId}::uuid IS NULL OR ae.campaign_id=${campaignId}::uuid)
             AND (${pageId}::uuid IS NULL OR ae.page_id=${pageId}::uuid)
@@ -160,6 +163,7 @@ async function breakdown(filters: AnalyticsFilters): Promise<AnalyticsBreakdown[
           LEFT JOIN landing_pages lp ON lp.id=conv.page_id
           LEFT JOIN variants v ON v.id=conv.variant_id
           WHERE conv.occurred_at >= ${filters.from} AND conv.occurred_at < ${filters.to}
+            AND coalesce(conv.properties->>'testTraffic','false') <> 'true'
             AND (${brandId}::uuid IS NULL OR conv.brand_id=${brandId}::uuid)
             AND (${campaignId}::uuid IS NULL OR conv.campaign_id=${campaignId}::uuid)
             AND (${pageId}::uuid IS NULL OR conv.page_id=${pageId}::uuid)
@@ -211,6 +215,7 @@ async function attribution(filters: AnalyticsFilters) {
         SELECT conv.*, camp.platform
         FROM conversions conv LEFT JOIN campaigns camp ON camp.id=conv.campaign_id
         WHERE conv.occurred_at >= ${filters.from} AND conv.occurred_at < ${filters.to}
+          AND coalesce(conv.properties->>'testTraffic','false') <> 'true'
           AND (${brandId}::uuid IS NULL OR conv.brand_id=${brandId}::uuid)
           AND (${campaignId}::uuid IS NULL OR conv.campaign_id=${campaignId}::uuid)
           AND (${pageId}::uuid IS NULL OR conv.page_id=${pageId}::uuid)
@@ -236,6 +241,7 @@ async function currencyTotals(filters: AnalyticsFilters) {
       SELECT coalesce(conv.currency,'UNSPECIFIED') AS currency, coalesce(sum(conv.value),0)::text AS revenue, count(*) FILTER (WHERE conv.value IS NOT NULL)::text AS conversions
       FROM conversions conv LEFT JOIN campaigns camp ON camp.id=conv.campaign_id
       WHERE conv.occurred_at >= ${filters.from} AND conv.occurred_at < ${filters.to}
+        AND coalesce(conv.properties->>'testTraffic','false') <> 'true'
         AND (${brandId}::uuid IS NULL OR conv.brand_id=${brandId}::uuid)
         AND (${campaignId}::uuid IS NULL OR conv.campaign_id=${campaignId}::uuid)
         AND (${pageId}::uuid IS NULL OR conv.page_id=${pageId}::uuid)
