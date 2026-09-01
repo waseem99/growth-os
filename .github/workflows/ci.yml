@@ -11,7 +11,7 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:17-alpine
@@ -31,12 +31,17 @@ jobs:
       AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
       GOOGLE_CLIENT_ID: ci-google-client-id
       GOOGLE_CLIENT_SECRET: ci-google-client-secret
+      CONVERSION_INGEST_SECRET: ci-conversion-secret-not-for-production
+      NEXT_PUBLIC_ADMIN_URL: http://127.0.0.1:3001
+      NEXT_PUBLIC_WEB_URL: http://127.0.0.1:3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
       - run: npm install --no-audit --no-fund
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
@@ -44,3 +49,9 @@ jobs:
       - run: npm run db:seed
       - run: npm run db:verify
       - run: npm run build
+      - name: Install Chromium for release E2E
+        run: npx playwright install --with-deps chromium
+      - name: Production-mode release E2E
+        run: npm run test:e2e
+        env:
+          E2E_USE_PRODUCTION: "1"
