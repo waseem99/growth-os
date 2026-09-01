@@ -21,19 +21,6 @@ type ActionResult = { ok: true; message: string; versionId?: string; revision?: 
 
 const asJson = (value: unknown) => value as Record<string, unknown>;
 
-async function invalidAssetIds(brandId: string, document: unknown, socialAssetId?: string | null) {
-  const parsed = pageDocumentSchema.safeParse(document);
-  if (!parsed.success) return [];
-  const ids = [...new Set([...collectAssetReferences(parsed.data).map((reference) => reference.assetId), ...(socialAssetId ? [socialAssetId] : [])])];
-  if (!ids.length) return [];
-  const { db, client } = getDatabase();
-  try {
-    const rows = await db.select({ id: assets.id, brandId: assets.brandId }).from(assets).where(inArray(assets.id, ids));
-    const valid = new Set(rows.filter((asset) => asset.brandId === brandId).map((asset) => asset.id));
-    return ids.filter((id) => !valid.has(id));
-  } finally { await client.end(); }
-}
-
 export async function saveSeoDraft(input: { pageId: string; expectedRevision: number; seo: unknown }): Promise<ActionResult> {
   const actor = await requirePermission("pages:manage");
   const parsed = pageSeoSchema.safeParse(input.seo);
