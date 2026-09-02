@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "migrate": "tsx scripts/migrate.ts",
+    "migrate": "node scripts/migrate.ts",
     "seed": "node scripts/assert-seed-safe.mjs && tsx scripts/seed.ts",
     "verify": "tsx scripts/verify.ts",
     "verify:schema": "tsx scripts/verify-schema.ts"
