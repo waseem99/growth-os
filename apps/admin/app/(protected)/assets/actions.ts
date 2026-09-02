@@ -22,6 +22,9 @@ type RegisterAssetInput = {
   tags?: string;
   platform?: string;
   creativeId?: string;
+  adHeadline?: string;
+  adPrimaryText?: string;
+  adCta?: string;
   width?: number | null;
   height?: number | null;
 };
@@ -64,17 +67,21 @@ export async function registerAsset(input: RegisterAssetInput) {
         campaignId: input.campaignId || null,
         platform: (input.platform || "").trim().slice(0, 80) || null,
         creativeId: (input.creativeId || "").trim().slice(0, 120) || null,
+        adHeadline: (input.adHeadline || "").trim().slice(0, 240) || null,
+        adPrimaryText: (input.adPrimaryText || "").trim().slice(0, 700) || null,
+        adCta: (input.adCta || "").trim().slice(0, 80) || null,
         uploadedBy: actor.id
       }),
       createdBy: actor.id
     }).returning({ id: assets.id });
     if (!created) throw new Error("ASSET_REGISTER_FAILED");
     revalidatePath("/assets");
+    revalidatePath("/campaigns");
     return created;
   } finally { await client.end(); }
 }
 
-export async function updateAssetMetadata(input: { id: string; title: string; altText: string; tags: string; campaignId?: string | null; platform?: string; creativeId?: string }) {
+export async function updateAssetMetadata(input: { id: string; title: string; altText: string; tags: string; campaignId?: string | null; platform?: string; creativeId?: string; adHeadline?: string; adPrimaryText?: string; adCta?: string }) {
   await requirePermission("assets:manage");
   const { db, client } = getDatabase();
   try {
@@ -85,11 +92,21 @@ export async function updateAssetMetadata(input: { id: string; title: string; al
     await db.update(assets).set({
       title: input.title.trim().slice(0, 180) || null,
       altText: input.altText.trim().slice(0, 300) || null,
-      metadata: metadata({ ...current, tags: normalizeTags(input.tags), campaignId: input.campaignId || null, platform: input.platform?.trim().slice(0, 80) || null, creativeId: input.creativeId?.trim().slice(0, 120) || null })
+      metadata: metadata({
+        ...current,
+        tags: normalizeTags(input.tags),
+        campaignId: input.campaignId || null,
+        platform: input.platform?.trim().slice(0, 80) || null,
+        creativeId: input.creativeId?.trim().slice(0, 120) || null,
+        adHeadline: input.adHeadline?.trim().slice(0, 240) || null,
+        adPrimaryText: input.adPrimaryText?.trim().slice(0, 700) || null,
+        adCta: input.adCta?.trim().slice(0, 80) || null
+      })
     }).where(eq(assets.id, input.id));
   } finally { await client.end(); }
   revalidatePath("/assets");
   revalidatePath(`/assets/${input.id}`);
+  revalidatePath("/campaigns");
 }
 
 export async function deleteAsset(formData: FormData) {
@@ -108,6 +125,7 @@ export async function deleteAsset(formData: FormData) {
   } finally { await client.end(); }
   if (url) await del(url);
   revalidatePath("/assets");
+  revalidatePath("/campaigns");
 }
 
 export async function replaceAssetInDrafts(input: { oldAssetId: string; newAssetId: string; pageIds: string[] }) {
