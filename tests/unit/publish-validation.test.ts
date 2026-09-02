@@ -3,9 +3,15 @@ import { defaultPageSeo, skillupCleanReference } from "@growth-os/page-engine";
 import { validatePublishInput } from "../../apps/admin/lib/publish-validation";
 
 describe("publication validation", () => {
-  it("accepts a valid page and SEO snapshot", () => {
-    const result = validatePublishInput({ document: skillupCleanReference, seo: defaultPageSeo("SkillUp Premium"), domainRequired: false, domainVerified: true });
+  it("accepts a valid page only when a verified product domain is assigned", () => {
+    const result = validatePublishInput({ document: skillupCleanReference, seo: defaultPageSeo("SkillUp Premium"), domainRequired: true, domainVerified: true });
     expect(result.ok).toBe(true);
+  });
+
+  it("blocks publishing when no product domain is assigned", () => {
+    const result = validatePublishInput({ document: skillupCleanReference, seo: defaultPageSeo("SkillUp Premium"), domainRequired: false, domainVerified: true });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.findings.some((finding) => finding.path === "domain" && finding.message.includes("Choose"))).toBe(true);
   });
 
   it("blocks invalid domains, assets and SEO before pointer changes", () => {
