@@ -48,11 +48,14 @@ export async function addDomain(formData: FormData) {
   const brandId = String(formData.get("brandId") ?? "");
   const hostname = normalizeHostname(String(formData.get("hostname") ?? ""));
   if (!brandId) throw new Error("INVALID_BRAND");
-  const makePrimary = formData.get("isPrimary") === "on";
+  const requestedPrimary = formData.get("isPrimary") === "on";
   const { db, client } = getDatabase();
   let id = "";
+  let makePrimary = requestedPrimary;
   try {
     await db.transaction(async (tx) => {
+      const [existingDomain] = await tx.select({ id: domains.id }).from(domains).where(and(eq(domains.brandId, brandId), ne(domains.status, "disabled"))).limit(1);
+      makePrimary = requestedPrimary || !existingDomain;
       if (makePrimary) await tx.update(domains).set({ isPrimary: false, updatedAt: new Date() }).where(eq(domains.brandId, brandId));
       const [created] = await tx.insert(domains).values({ brandId, hostname, isPrimary: makePrimary, status: "pending" }).returning({ id: domains.id });
       if (!created) throw new Error("DOMAIN_CREATE_FAILED");
