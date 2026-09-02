@@ -28,7 +28,7 @@ describe("page lifecycle helpers", () => {
     expect(hero?.headline).toBe("Same headline as Meta");
     expect(hero?.subheadline).toBe("Same primary ad message");
     expect(hero?.heroAssetId).toBe(creativeAssetId);
-    const subscription = next.blocks.find((block) => block.type === "subscriptionForm");
+    const subscription = next.blocks.find((block) => block.type === "form" && block.variant === "subscription");
     expect(subscription?.ctaLabel).toBe("Get offer");
   });
 
