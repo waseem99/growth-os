@@ -51,6 +51,9 @@ test("host sitemap and robots endpoints remain available", async ({ request }) =
   expect(await sitemap.text()).toContain("http://skillup.localhost/ai-games");
   const robots = await request.get("http://skillup.localhost:3000/robots.txt");
   expect(robots.status()).toBe(200);
+  const robotsText = await robots.text();
+  expect(robotsText).toContain("Disallow: /api/");
+  expect(robotsText).toContain("Sitemap: http://skillup.localhost/sitemap.xml");
 });
 
 test("event and downstream conversion ingestion preserve campaign context and idempotency", async ({ request }) => {
