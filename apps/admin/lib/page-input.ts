@@ -62,8 +62,8 @@ export function applyAdCreative(document: PageDocument, creative: { assetId: str
   }
   const cta = blocks.find((block) => block.type === "cta");
   if (cta && creative.cta) cta.ctaLabel = creative.cta;
-  const subscription = blocks.find((block) => block.type === "subscriptionForm");
-  if (subscription && creative.cta) subscription.ctaLabel = creative.cta;
+  const subscriptionForm = blocks.find((block) => block.type === "form" && block.variant === "subscription");
+  if (subscriptionForm && creative.cta) subscriptionForm.ctaLabel = creative.cta;
   return pageDocumentSchema.parse(raw);
 }
 
