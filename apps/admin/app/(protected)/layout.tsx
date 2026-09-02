@@ -18,16 +18,16 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
         <Link className="brandmark" href="/">GrowthOS</Link>
         <nav aria-label="Admin navigation">
           <Link href="/">Overview</Link>
-          <Link href="/pages">Landing Pages</Link>
           {canManageCampaigns && <Link href="/campaigns">Campaigns</Link>}
-          <Link href="/assets">Assets</Link>
-          {canViewAnalytics && <Link href="/analytics">Analytics</Link>}
+          <Link href="/assets">Ad Creative</Link>
+          <Link href="/pages">Landing Pages</Link>
+          {canViewAnalytics && <Link href="/analytics">Results</Link>}
           <details className="nav-more">
             <summary>More</summary>
             <div className="nav-more-menu">
               {canViewAnalytics && <Link href="/experiments">Experiments</Link>}
               {canUseAi && <Link href="/ai">AI Assistant</Link>}
-              {isAdmin && <Link href="/brands">Brands & Domains</Link>}
+              {isAdmin && <Link href="/brands">Products & Domains</Link>}
               {canManageIntegrations && <Link href="/integrations">Integrations</Link>}
               {isAdmin && <Link href="/users">Users</Link>}
               {isAdmin && <Link href="/audit">Audit Log</Link>}
