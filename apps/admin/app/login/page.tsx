@@ -12,7 +12,7 @@ export default async function LoginPage() {
       <section className="login-card">
         <p className="eyebrow">GrowthOS · Internal</p>
         <h1>Sign in to continue.</h1>
-        <p>Access is restricted to the configured internal administrator and approved team accounts. There is no public registration.</p>
+        <p>Access is restricted to the configured internal administrator and approved team accounts. There is no public account registration.</p>
 
         <form className="credentials-form" action={async (formData) => {
           "use server";
