@@ -8,6 +8,9 @@ export type AssetMetadata = {
   campaignId?: string | null;
   platform?: string | null;
   creativeId?: string | null;
+  adHeadline?: string | null;
+  adPrimaryText?: string | null;
+  adCta?: string | null;
   uploadedBy?: string;
 };
 
@@ -58,6 +61,9 @@ export function parseAssetMetadata(value: unknown): AssetMetadata {
     campaignId: typeof data.campaignId === "string" ? data.campaignId : null,
     platform: typeof data.platform === "string" ? data.platform : null,
     creativeId: typeof data.creativeId === "string" ? data.creativeId : null,
+    adHeadline: typeof data.adHeadline === "string" ? data.adHeadline : null,
+    adPrimaryText: typeof data.adPrimaryText === "string" ? data.adPrimaryText : null,
+    adCta: typeof data.adCta === "string" ? data.adCta : null,
     uploadedBy: typeof data.uploadedBy === "string" ? data.uploadedBy : undefined
   };
 }
