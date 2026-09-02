@@ -23,6 +23,44 @@ import { adminCorrelationId, logAdminEvent, reportAdminError } from "@/lib/opera
 type ActionResult = { ok: true; message: string; versionId?: string; revision?: number } | { ok: false; error: string; findings?: Array<{ path: string; message: string }> };
 const asJson = (value: unknown) => value as Record<string, unknown>;
 
+export async function assignPageDomain(input: { pageId: string; expectedRevision: number; domainId: string | null }): Promise<ActionResult> {
+  const actor = await requirePermission("pages:manage");
+  const { db, client } = getDatabase();
+  try {
+    const [page] = await db.select({ brandId: landingPages.brandId, domainId: landingPages.domainId, revision: landingPages.draftRevision }).from(landingPages).where(eq(landingPages.id, input.pageId)).limit(1);
+    if (!page) return { ok: false, error: "Page not found." };
+    if (page.revision !== input.expectedRevision) return { ok: false, error: "This page changed elsewhere. Reload before changing the domain." };
+
+    let hostname: string | null = null;
+    if (input.domainId) {
+      const [domain] = await db.select({ id: domains.id, brandId: domains.brandId, hostname: domains.hostname, status: domains.status }).from(domains).where(eq(domains.id, input.domainId)).limit(1);
+      if (!domain || domain.brandId !== page.brandId) return { ok: false, error: "That domain does not belong to this page's brand." };
+      if (domain.status === "disabled") return { ok: false, error: "Disabled domains cannot be assigned to a page." };
+      hostname = domain.hostname;
+    }
+
+    const [saved] = await db.update(landingPages).set({
+      domainId: input.domainId || null,
+      draftRevision: input.expectedRevision + 1,
+      updatedAt: new Date(),
+      updatedBy: actor.id
+    }).where(and(eq(landingPages.id, input.pageId), eq(landingPages.draftRevision, input.expectedRevision))).returning({ revision: landingPages.draftRevision });
+    if (!saved) return { ok: false, error: "This page changed elsewhere. Reload before changing the domain." };
+
+    await writeAudit({
+      actorUserId: actor.id,
+      action: "page.domain_assigned",
+      entityType: "landing_page",
+      entityId: input.pageId,
+      before: { domainId: page.domainId, revision: input.expectedRevision },
+      after: { domainId: input.domainId || null, hostname, revision: saved.revision }
+    });
+    revalidatePath(`/pages/${input.pageId}`);
+    revalidatePath(`/pages/${input.pageId}/publishing`);
+    return { ok: true, message: hostname ? `Assigned to ${hostname}.` : "Domain assignment cleared.", revision: saved.revision };
+  } finally { await client.end(); }
+}
+
 export async function saveSeoDraft(input: { pageId: string; expectedRevision: number; seo: unknown }): Promise<ActionResult> {
   const actor = await requirePermission("pages:manage");
   const parsed = pageSeoSchema.safeParse(input.seo);
@@ -63,15 +101,7 @@ export async function publishPage(input: { pageId: string; expectedRevision: num
       })();
       const validation = validatePublishInput({ document: page.content, seo: page.seo, domainRequired: Boolean(page.domainId), domainVerified, invalidAssetIds: invalidAssets });
       if (!validation.ok) {
-        await tx.insert(auditLogs).values({
-          actorUserId: actor.id,
-          action: "page.publish_rejected",
-          entityType: "landing_page",
-          entityId: page.id,
-          before: { revision: page.revision },
-          after: { reason: "validation_failed", findingCount: validation.findings.length },
-          correlationId
-        });
+        await tx.insert(auditLogs).values({ actorUserId: actor.id, action: "page.publish_rejected", entityType: "landing_page", entityId: page.id, before: { revision: page.revision }, after: { reason: "validation_failed", findingCount: validation.findings.length }, correlationId });
         logAdminEvent("warn", "page_publish_rejected", { correlationId, pageId: page.id, findingCount: validation.findings.length });
         return { ok: false as const, error: "Publication validation failed.", findings: validation.findings };
       }
@@ -113,7 +143,7 @@ export async function rollbackPage(input: { pageId: string; versionId: string; e
       return { ok: true as const, message: `Rolled back to version ${target.number}.`, versionId: target.id };
     });
   } catch (error) {
-    await reportAdminError("page_rollback_failed", error, { correlationId, pageId: input.pageId, actorUserId: actor.id });
+    await reportAdminError("page_rollback_failed", error, { correlationId, pageId: input.pageId });
     return { ok: false, error: error instanceof Error ? error.message : "Rollback failed." };
   } finally { await client.end(); }
 }

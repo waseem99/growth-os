@@ -20,14 +20,19 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
           <Link href="/">Overview</Link>
           <Link href="/pages">Landing Pages</Link>
           {canManageCampaigns && <Link href="/campaigns">Campaigns</Link>}
+          <Link href="/assets">Assets</Link>
           {canViewAnalytics && <Link href="/analytics">Analytics</Link>}
-          {canViewAnalytics && <Link href="/experiments">Experiments</Link>}
-          {canUseAi && <Link href="/ai">AI</Link>}
-          <Link href="/assets">Asset Library</Link>
-          {isAdmin && <Link href="/brands">Brands</Link>}
-          {canManageIntegrations && <Link href="/integrations">Integrations</Link>}
-          {isAdmin && <Link href="/users">Users</Link>}
-          {isAdmin && <Link href="/audit">Audit</Link>}
+          <details className="nav-more">
+            <summary>More</summary>
+            <div className="nav-more-menu">
+              {canViewAnalytics && <Link href="/experiments">Experiments</Link>}
+              {canUseAi && <Link href="/ai">AI Assistant</Link>}
+              {isAdmin && <Link href="/brands">Brands & Domains</Link>}
+              {canManageIntegrations && <Link href="/integrations">Integrations</Link>}
+              {isAdmin && <Link href="/users">Users</Link>}
+              {isAdmin && <Link href="/audit">Audit Log</Link>}
+            </div>
+          </details>
         </nav>
         <form action={async () => {
           "use server";

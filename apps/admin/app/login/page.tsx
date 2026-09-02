@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
+import { LoginSubmitButton } from "./login-submit-button";
 
 export default async function LoginPage() {
   const session = await auth();
@@ -10,9 +11,11 @@ export default async function LoginPage() {
   return (
     <main className="login-shell">
       <section className="login-card">
-        <p className="eyebrow">GrowthOS · Internal</p>
-        <h1>Sign in to continue.</h1>
-        <p>Access is restricted to the configured internal administrator and approved team accounts. There is no public account registration.</p>
+        <div className="login-copy">
+          <p className="eyebrow">GrowthOS</p>
+          <h1>Sign in to continue.</h1>
+          <p>Use your internal GrowthOS account. There is no public account registration.</p>
+        </div>
 
         <form className="credentials-form" action={async (formData) => {
           "use server";
@@ -24,25 +27,26 @@ export default async function LoginPage() {
         }}>
           <label>
             Email
-            <input name="email" type="email" autoComplete="username" required />
+            <input name="email" type="email" autoComplete="username" placeholder="you@company.com" required />
           </label>
           <label>
             Password
-            <input name="password" type="password" autoComplete="current-password" required />
+            <input name="password" type="password" autoComplete="current-password" placeholder="••••••••••••" required />
           </label>
-          <button className="primary-button" type="submit">Sign in</button>
+          <LoginSubmitButton />
+          <p className="login-help">You’ll be taken straight to the GrowthOS overview after sign-in.</p>
         </form>
 
         {googleEnabled ? (
-          <>
-            <div className="login-divider"><span>or</span></div>
+          <details className="login-alt">
+            <summary>Other sign-in option</summary>
             <form action={async () => {
               "use server";
               await signIn("google", { redirectTo: "/" });
             }}>
               <button className="secondary-button" type="submit">Continue with Google</button>
             </form>
-          </>
+          </details>
         ) : null}
       </section>
     </main>

@@ -22,6 +22,13 @@ type GrowthToken = {
   growthStatus?: GrowthUserStatus;
 } & Record<string, unknown>;
 
+type GrowthAuthorizedUser = {
+  id?: string;
+  email?: string | null;
+  growthRole?: GrowthRole;
+  growthStatus?: GrowthUserStatus;
+};
+
 const internalAdminEmail = process.env.INTERNAL_ADMIN_EMAIL?.trim().toLowerCase();
 const internalAdminPassword = process.env.INTERNAL_ADMIN_PASSWORD;
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -61,7 +68,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return {
           id: allowed.id,
           email: allowed.email,
-          name: allowed.name ?? "GrowthOS Owner"
+          name: allowed.name ?? "GrowthOS Owner",
+          growthRole: allowed.role,
+          growthStatus: allowed.status
         };
       }
     }),
@@ -72,13 +81,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: { signIn: "/login", error: "/login" },
   session: { strategy: "jwt", maxAge: 60 * 60 * 8, updateAge: 60 * 15 },
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, account }) {
       if (!user.email) return false;
+      if (account?.provider === "credentials") {
+        return (user as GrowthAuthorizedUser).growthStatus === "active";
+      }
       const allowed = await findAllowedUser(user.email);
       return Boolean(allowed && allowed.status === "active");
     },
-    async jwt({ token }) {
+    async jwt({ token, user, account }) {
       const growthToken = token as GrowthToken;
+
+      if (account?.provider === "credentials" && user?.email) {
+        const authorized = user as GrowthAuthorizedUser;
+        growthToken.email = user.email;
+        growthToken.growthUserId = user.id;
+        growthToken.growthRole = authorized.growthRole ?? "analyst";
+        growthToken.growthStatus = authorized.growthStatus ?? "disabled";
+        return token;
+      }
+
       if (!growthToken.email) return token;
       const allowed = await findAllowedUser(growthToken.email);
       if (!allowed) {
