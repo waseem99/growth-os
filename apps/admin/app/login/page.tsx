@@ -13,8 +13,8 @@ export default async function LoginPage() {
       <section className="login-card">
         <div className="login-copy">
           <p className="eyebrow">GrowthOS</p>
-          <h1>Welcome back.</h1>
-          <p>Sign in with your internal GrowthOS account. There is no public account registration.</p>
+          <h1>Sign in to continue.</h1>
+          <p>Use your internal GrowthOS account. There is no public account registration.</p>
         </div>
 
         <form className="credentials-form" action={async (formData) => {
