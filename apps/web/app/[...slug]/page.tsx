@@ -49,7 +49,7 @@ export async function generateMetadata({ params, searchParams }: RouteProps): Pr
   const socialId = seo.data.socialAssetId ?? page.defaultSocialAssetId;
   const assetMap = parsed.success ? await resolvePageAssets(parsed.data, [socialId]) : new Map();
   const social = assetMap.get(socialId ?? "");
-  const canIndex = seo.data.index && !snapshot.testTraffic;
+  const canIndex = seo.data.index && !snapshot.testTraffic && !page.platformAlias;
   return {
     title: seo.data.title,
     description: seo.data.description,
