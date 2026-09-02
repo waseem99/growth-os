@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const unifiedSkillUp = "http://skillup.localhost:3001/ai-games";
+const platformAlias = "growthos-skillup.vercel.app";
 
 test("the admin deployment also serves the configured public landing page", async ({ page, context }) => {
   await page.goto(unifiedSkillUp);
@@ -19,4 +20,21 @@ test("the unified product host keeps robots and sitemap behavior", async ({ requ
   const sitemap = await request.get("http://skillup.localhost:3001/sitemap.xml");
   expect(sitemap.status()).toBe(200);
   expect(await sitemap.text()).toContain("http://skillup.localhost/ai-games");
+});
+
+test("a GrowthOS Vercel alias resolves by brand slug and stays noindex", async ({ request }) => {
+  const page = await request.get("http://127.0.0.1:3001/ai-games", { headers: { host: platformAlias } });
+  expect(page.status()).toBe(200);
+  expect(page.headers()["x-robots-tag"]).toBe("noindex, nofollow");
+  const html = await page.text();
+  expect(html).toContain("Learn AI skills through games");
+  expect(html).toContain("https://growthos-skillup.vercel.app/ai-games");
+
+  const robots = await request.get("http://127.0.0.1:3001/robots.txt", { headers: { host: platformAlias } });
+  expect(robots.status()).toBe(200);
+  expect(await robots.text()).toContain("Disallow: /");
+
+  const sitemap = await request.get("http://127.0.0.1:3001/sitemap.xml", { headers: { host: platformAlias } });
+  expect(sitemap.status()).toBe(200);
+  expect(await sitemap.text()).not.toContain("ai-games");
 });
