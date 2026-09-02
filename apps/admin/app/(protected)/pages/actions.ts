@@ -3,11 +3,12 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getDatabase, brands, campaigns, landingPages } from "@growth-os/db";
+import { getDatabase, assets, brands, campaigns, domains, landingPages } from "@growth-os/db";
 import { clearAssetReferences, defaultPageSeo, pageDocumentSchema, pageSeoSchema, type PageDocument } from "@growth-os/page-engine";
 import { writeAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/user-access";
-import { instantiatePageTemplate, normalizePageSlug, reseedPageDocument } from "@/lib/page-input";
+import { applyAdCreative, instantiatePageTemplate, normalizePageSlug, reseedPageDocument } from "@/lib/page-input";
+import { parseAssetMetadata } from "@/lib/asset-references";
 import { syncDraftAssetUsages, validatePageAssetReferences } from "@/lib/asset-usage-db";
 
 const json = (value: unknown) => value as Record<string, unknown>;
@@ -21,6 +22,20 @@ async function assertBrandAndCampaign(brandId: string, campaignId?: string | nul
       const [campaign] = await db.select({ id: campaigns.id, brandId: campaigns.brandId }).from(campaigns).where(eq(campaigns.id, campaignId)).limit(1);
       if (!campaign || campaign.brandId !== brandId) throw new Error("CAMPAIGN_BRAND_MISMATCH");
     }
+    const domainRows = await db.select({ id: domains.id, isPrimary: domains.isPrimary }).from(domains).where(and(eq(domains.brandId, brandId), eq(domains.status, "verified")));
+    const primary = domainRows.find((domain) => domain.isPrimary) ?? domainRows[0] ?? null;
+    return { defaultDomainId: primary?.id ?? null };
+  } finally { await client.end(); }
+}
+
+async function loadCreative(creativeAssetId: string, brandId: string, campaignId: string | null) {
+  const { db, client } = getDatabase();
+  try {
+    const [asset] = await db.select({ id: assets.id, brandId: assets.brandId, metadata: assets.metadata }).from(assets).where(eq(assets.id, creativeAssetId)).limit(1);
+    if (!asset || asset.brandId !== brandId) throw new Error("CREATIVE_BRAND_MISMATCH");
+    const meta = parseAssetMetadata(asset.metadata);
+    if (campaignId && meta.campaignId && meta.campaignId !== campaignId) throw new Error("CREATIVE_CAMPAIGN_MISMATCH");
+    return { assetId: asset.id, headline: meta.adHeadline, primaryText: meta.adPrimaryText, cta: meta.adCta };
   } finally { await client.end(); }
 }
 
@@ -29,17 +44,22 @@ export async function createPage(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim().slice(0, 160);
   const brandId = String(formData.get("brandId") ?? "");
   const campaignId = String(formData.get("campaignId") ?? "") || null;
+  const creativeAssetId = String(formData.get("creativeAssetId") ?? "") || null;
   const templateKey = String(formData.get("templateKey") ?? "minimal");
   const slug = normalizePageSlug(String(formData.get("slug") ?? name));
   if (!name || !slug || !brandId) throw new Error("PAGE_INPUT_REQUIRED");
-  await assertBrandAndCampaign(brandId, campaignId);
-  const document = instantiatePageTemplate(templateKey);
+  const { defaultDomainId } = await assertBrandAndCampaign(brandId, campaignId);
+  let document = instantiatePageTemplate(templateKey);
+  if (creativeAssetId) document = applyAdCreative(document, await loadCreative(creativeAssetId, brandId, campaignId));
   const seo = defaultPageSeo(name);
   const { db, client } = getDatabase(); let id = "";
-  try { const [created] = await db.insert(landingPages).values({ brandId, campaignId, name, slug, conversionGoal: "subscription", draftContent: json(document), draftSeo: json(seo), createdBy: actor.id, updatedBy: actor.id }).returning({ id: landingPages.id }); if (!created) throw new Error("PAGE_CREATE_FAILED"); id = created.id; }
-  finally { await client.end(); }
+  try {
+    const [created] = await db.insert(landingPages).values({ brandId, domainId: defaultDomainId, campaignId, name, slug, conversionGoal: "subscription", draftContent: json(document), draftSeo: json(seo), createdBy: actor.id, updatedBy: actor.id }).returning({ id: landingPages.id });
+    if (!created) throw new Error("PAGE_CREATE_FAILED");
+    id = created.id;
+  } finally { await client.end(); }
   await syncDraftAssetUsages(id, document);
-  await writeAudit({ actorUserId: actor.id, action: "page.created", entityType: "landing_page", entityId: id, after: { brandId, campaignId, name, slug, templateKey, revision: 1 } });
+  await writeAudit({ actorUserId: actor.id, action: "page.created", entityType: "landing_page", entityId: id, after: { brandId, campaignId, domainId: defaultDomainId, creativeAssetId, name, slug, templateKey, revision: 1 } });
   redirect(`/pages/${id}`);
 }
 
@@ -77,7 +97,7 @@ async function availableCopySlug(brandId: string, baseSlug: string) {
 }
 
 export async function duplicatePage(input: { sourceId: string; targetBrandId: string; targetCampaignId?: string | null }) {
-  const actor = await requirePermission("pages:manage"); await assertBrandAndCampaign(input.targetBrandId, input.targetCampaignId || null);
+  const actor = await requirePermission("pages:manage"); const { defaultDomainId } = await assertBrandAndCampaign(input.targetBrandId, input.targetCampaignId || null);
   const { db, client } = getDatabase(); let source: { name: string; slug: string; brandId: string; conversionGoal: string | null; draftContent: unknown; draftSeo: unknown } | undefined;
   try { [source] = await db.select({ name: landingPages.name, slug: landingPages.slug, brandId: landingPages.brandId, conversionGoal: landingPages.conversionGoal, draftContent: landingPages.draftContent, draftSeo: landingPages.draftSeo }).from(landingPages).where(eq(landingPages.id, input.sourceId)).limit(1); }
   finally { await client.end(); }
@@ -85,10 +105,10 @@ export async function duplicatePage(input: { sourceId: string; targetBrandId: st
   const parsed = pageDocumentSchema.safeParse(source.draftContent); const baseDocument: PageDocument = reseedPageDocument(parsed.success ? parsed.data : instantiatePageTemplate("minimal")); const sameBrand = source.brandId === input.targetBrandId; const document = sameBrand ? baseDocument : clearAssetReferences(baseDocument);
   const seoParsed = pageSeoSchema.safeParse(source.draftSeo); const seo = seoParsed.success ? { ...seoParsed.data, canonicalUrl: null, socialAssetId: sameBrand ? seoParsed.data.socialAssetId : null } : defaultPageSeo(`${source.name} Copy`); const slug = await availableCopySlug(input.targetBrandId, source.slug);
   const connection = getDatabase(); let createdId = "";
-  try { const [created] = await connection.db.insert(landingPages).values({ brandId: input.targetBrandId, campaignId: input.targetCampaignId || null, name: `${source.name} Copy`.slice(0, 160), slug, conversionGoal: source.conversionGoal, draftContent: json(document), draftSeo: json(seo), createdBy: actor.id, updatedBy: actor.id }).returning({ id: landingPages.id }); if (!created) throw new Error("PAGE_DUPLICATE_FAILED"); createdId = created.id; }
+  try { const [created] = await connection.db.insert(landingPages).values({ brandId: input.targetBrandId, domainId: defaultDomainId, campaignId: input.targetCampaignId || null, name: `${source.name} Copy`.slice(0, 160), slug, conversionGoal: source.conversionGoal, draftContent: json(document), draftSeo: json(seo), createdBy: actor.id, updatedBy: actor.id }).returning({ id: landingPages.id }); if (!created) throw new Error("PAGE_DUPLICATE_FAILED"); createdId = created.id; }
   finally { await connection.client.end(); }
   await syncDraftAssetUsages(createdId, document);
-  await writeAudit({ actorUserId: actor.id, action: "page.duplicated", entityType: "landing_page", entityId: createdId, after: { sourceId: input.sourceId, targetBrandId: input.targetBrandId, targetCampaignId: input.targetCampaignId || null, slug } });
+  await writeAudit({ actorUserId: actor.id, action: "page.duplicated", entityType: "landing_page", entityId: createdId, after: { sourceId: input.sourceId, targetBrandId: input.targetBrandId, targetCampaignId: input.targetCampaignId || null, domainId: defaultDomainId, slug } });
   revalidatePath("/pages"); return { id: createdId };
 }
 
