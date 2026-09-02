@@ -18,12 +18,14 @@ test("admin has no public signup and requires authentication", async ({ page }) 
 });
 
 test("public ingestion rejects malformed and unauthenticated writes safely", async ({ request }) => {
-  const invalidEvent = await request.post("http://127.0.0.1:3000/api/events", { data: { bad: true } });
-  expect(invalidEvent.status()).toBe(400);
-  expect(invalidEvent.headers()["x-request-id"]).toBeTruthy();
-  expect(invalidEvent.headers()["x-ratelimit-limit"]).toBe("120");
+  for (const origin of ["http://127.0.0.1:3000", "http://127.0.0.1:3001"]) {
+    const invalidEvent = await request.post(`${origin}/api/events`, { data: { bad: true } });
+    expect(invalidEvent.status()).toBe(400);
+    expect(invalidEvent.headers()["x-request-id"]).toBeTruthy();
+    expect(invalidEvent.headers()["x-ratelimit-limit"]).toBe("120");
 
-  const conversion = await request.post("http://127.0.0.1:3000/api/conversions", { data: { bad: true } });
-  expect(conversion.status()).toBe(401);
-  expect(conversion.headers()["x-request-id"]).toBeTruthy();
+    const conversion = await request.post(`${origin}/api/conversions`, { data: { bad: true } });
+    expect(conversion.status()).toBe(401);
+    expect(conversion.headers()["x-request-id"]).toBeTruthy();
+  }
 });
