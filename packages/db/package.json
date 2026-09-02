@@ -11,11 +11,12 @@
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "migrate": "tsx scripts/migrate.ts",
-    "seed": "tsx scripts/seed.ts",
-    "verify": "tsx scripts/verify.ts"
+    "seed": "node scripts/assert-seed-safe.mjs && tsx scripts/seed.ts",
+    "verify": "tsx scripts/verify.ts",
+    "verify:schema": "tsx scripts/verify-schema.ts"
   },
   "dependencies": {
-    "drizzle-orm": "0.44.5",
+    "drizzle-orm": "0.45.2",
     "postgres": "3.4.7"
   },
   "devDependencies": {

@@ -15,7 +15,8 @@
     "test:e2e": "playwright test",
     "db:migrate": "npm run migrate -w @growth-os/db",
     "db:seed": "npm run seed -w @growth-os/db",
-    "db:verify": "npm run verify -w @growth-os/db"
+    "db:verify": "npm run verify -w @growth-os/db",
+    "db:verify:schema": "npm run verify:schema -w @growth-os/db"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",

@@ -11,7 +11,7 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     services:
       postgres:
         image: postgres:17-alpine
@@ -31,16 +31,61 @@ jobs:
       AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
       GOOGLE_CLIENT_ID: ci-google-client-id
       GOOGLE_CLIENT_SECRET: ci-google-client-secret
+      CONVERSION_INGEST_SECRET: ci-conversion-secret-not-for-production
+      NEXT_PUBLIC_ADMIN_URL: http://127.0.0.1:3001
+      NEXT_PUBLIC_WEB_URL: http://127.0.0.1:3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
       - run: npm install --no-audit --no-fund
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
       - run: npm run db:migrate
+      - name: Production-safe schema verification
+        run: npm run db:verify:schema
       - run: npm run db:seed
       - run: npm run db:verify
       - run: npm run build
+      - name: Install Chromium for release E2E
+        run: npx playwright install --with-deps chromium
+      - name: Production-mode release E2E
+        run: npm run test:e2e
+        env:
+          E2E_USE_PRODUCTION: "1"
+      - name: Lighthouse mobile release budgets
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo sh -c 'echo "127.0.0.1 skillup.localhost" >> /etc/hosts'
+          npm run start -w @growth-os/web -- --hostname 127.0.0.1 > /tmp/growthos-web.log 2>&1 &
+          WEB_PID=$!
+          trap 'kill "$WEB_PID" 2>/dev/null || true' EXIT
+          READY=0
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error -H 'Host: skillup.localhost' http://127.0.0.1:3000/ai-games > /dev/null; then
+              READY=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$READY" -ne 1 ]; then
+            cat /tmp/growthos-web.log
+            exit 1
+          fi
+          CHROME_PATH=$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux*/chrome' | head -n 1)
+          if [ -z "$CHROME_PATH" ]; then
+            echo "Playwright Chromium executable not found"
+            exit 1
+          fi
+          export CHROME_PATH
+          npx --yes lighthouse@12.8.2 http://skillup.localhost:3000/ai-games \
+            --output=json \
+            --output-path=/tmp/growthos-lighthouse.json \
+            --only-categories=performance,accessibility,seo \
+            --chrome-flags='--headless --no-sandbox --disable-dev-shm-usage'
+          node scripts/verify-lighthouse.mjs /tmp/growthos-lighthouse.json

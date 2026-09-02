@@ -27,6 +27,7 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
           {isAdmin && <Link href="/brands">Brands</Link>}
           {canManageIntegrations && <Link href="/integrations">Integrations</Link>}
           {isAdmin && <Link href="/users">Users</Link>}
+          {isAdmin && <Link href="/audit">Audit</Link>}
         </nav>
         <form action={async () => {
           "use server";
