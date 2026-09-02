@@ -21,7 +21,7 @@ function run(command, args, cwd) {
 
 if (process.env.VERCEL_ENV === "production") {
   console.log("GrowthOS: applying production database migrations before build...");
-  run("npm", ["run", "db:migrate"], repoRoot);
+  run(process.execPath, ["packages/db/scripts/migrate.ts"], repoRoot);
 } else {
   console.log(`GrowthOS: skipping database migrations for VERCEL_ENV=${process.env.VERCEL_ENV ?? "unset"}.`);
 }
