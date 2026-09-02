@@ -4,18 +4,22 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { PageSeo } from "@growth-os/page-engine";
-import { publishPage, rollbackPage, saveSeoDraft, unpublishPage } from "./actions";
+import { assignPageDomain, publishPage, rollbackPage, saveSeoDraft, unpublishPage } from "./actions";
 
 type VersionRow = { id: string; number: number; createdAt: string; publishNote: string | null; author: string | null };
+type DomainRow = { id: string; hostname: string; status: string; isPrimary: boolean };
 
-export function PublishPanel({ pageId, initialRevision, initialSeo, versions, currentVersionId, domainLabel }: { pageId: string; initialRevision: number; initialSeo: PageSeo; versions: VersionRow[]; currentVersionId: string | null; domainLabel: string }) {
+export function PublishPanel({ pageId, initialRevision, initialSeo, versions, currentVersionId, initialDomainId, domains }: { pageId: string; initialRevision: number; initialSeo: PageSeo; versions: VersionRow[]; currentVersionId: string | null; initialDomainId: string | null; domains: DomainRow[] }) {
   const router = useRouter();
   const [revision, setRevision] = useState(initialRevision);
   const [seo, setSeo] = useState(initialSeo);
+  const [domainId, setDomainId] = useState(initialDomainId ?? "");
   const [note, setNote] = useState("");
   const [message, setMessage] = useState("");
   const [findings, setFindings] = useState<Array<{ path: string; message: string }>>([]);
   const [pending, startTransition] = useTransition();
+  const selectedDomain = domains.find((domain) => domain.id === domainId) ?? null;
+  const domainLabel = selectedDomain ? `${selectedDomain.hostname} (${selectedDomain.status})` : "not assigned";
 
   const run = (job: () => Promise<{ ok: boolean; message?: string; error?: string; revision?: number; findings?: Array<{ path: string; message: string }> }>) => startTransition(async () => {
     setFindings([]); setMessage("Working…");
@@ -40,7 +44,15 @@ export function PublishPanel({ pageId, initialRevision, initialSeo, versions, cu
     </section>
 
     <section className="settings-card publish-card">
-      <div><p className="eyebrow">Publication</p><h2>{currentVersionId ? "Published" : "Not published"}</h2><p>Domain: {domainLabel}. A publish validates schema, assets, domain and SEO before the atomic pointer switch.</p></div>
+      <div><p className="eyebrow">Publication</p><h2>{currentVersionId ? "Published" : "Not published"}</h2><p>Public domain: {domainLabel}. Select the hostname this page should resolve on before publishing.</p></div>
+      <label>Domain
+        <select value={domainId} disabled={pending} onChange={(event) => setDomainId(event.target.value)}>
+          <option value="">Not assigned</option>
+          {domains.map((domain) => <option key={domain.id} value={domain.id}>{domain.hostname}{domain.isPrimary ? " · primary" : ""} · {domain.status}</option>)}
+        </select>
+      </label>
+      <button type="button" disabled={pending} onClick={() => run(() => assignPageDomain({ pageId, expectedRevision: revision, domainId: domainId || null }))}>Save domain</button>
+      {selectedDomain?.status === "pending" ? <p className="publish-hint">This domain is still marked Pending DNS. Publishing will remain blocked until it is verified.</p> : null}
       <label>Publish note<textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Optional change summary" /></label>
       <button className="primary-button" type="button" disabled={pending} onClick={() => run(() => publishPage({ pageId, expectedRevision: revision, publishNote: note }))}>Publish immutable version</button>
       {currentVersionId ? <button type="button" disabled={pending} onClick={() => run(() => unpublishPage({ pageId, expectedCurrentVersionId: currentVersionId }))}>Unpublish</button> : null}
