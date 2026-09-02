@@ -1,14 +1,23 @@
 import Link from "next/link";
 import { getRuntimeConfig } from "@growth-os/config";
+import { requireGrowthUser } from "@/lib/user-access";
 
-const steps = [
-  { number: "01", title: "Set up the brand + domain", body: "Create the product once, then attach its public hostname and brand defaults.", href: "/brands", cta: "Open Brands & Domains" },
-  { number: "02", title: "Create the landing page", body: "Choose the brand, template and optional campaign. Then edit copy, sections and assets.", href: "/pages", cta: "Open Landing Pages" },
-  { number: "03", title: "Preview and publish", body: "Preview the exact draft, validate it, then publish an immutable version when it is ready.", href: "/pages", cta: "Manage Pages" }
-];
-
-export default function AdminHome() {
+export default async function AdminHome() {
   const config = getRuntimeConfig();
+  const user = await requireGrowthUser();
+  const isAdmin = user.role === "owner" || user.role === "admin";
+  const steps = [
+    {
+      number: "01",
+      title: isAdmin ? "Set up the brand + domain" : "Choose the brand",
+      body: isAdmin ? "Create the product once, then attach its public hostname and brand defaults." : "Use an active brand that an administrator has already configured for you.",
+      href: isAdmin ? "/brands" : "/pages",
+      cta: isAdmin ? "Open Brands & Domains" : "Open Landing Pages"
+    },
+    { number: "02", title: "Create the landing page", body: "Choose the brand, template and optional campaign. Then edit copy, sections and assets.", href: "/pages", cta: "Open Landing Pages" },
+    { number: "03", title: "Preview and publish", body: "Preview the exact draft, validate it, then publish an immutable version when it is ready.", href: "/pages", cta: "Manage Pages" }
+  ];
+
   return (
     <main className="shell operator-home">
       <section className="operator-hero">
