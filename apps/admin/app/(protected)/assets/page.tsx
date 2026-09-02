@@ -15,9 +15,11 @@ export default async function AssetsPage({ searchParams }: { searchParams: Searc
   const query = await searchParams;
   const q = param(query.q).toLowerCase();
   const brandFilter = param(query.brand);
+  const campaignFilter = param(query.campaign);
   const typeFilter = param(query.type);
   const tagFilter = param(query.tag).toLowerCase();
   const usageFilter = param(query.usage);
+  const platformPrefill = param(query.platform);
   const { db, client } = getDatabase();
   try {
     const [rows, brandRows, campaignRows, usages] = await Promise.all([
@@ -44,20 +46,20 @@ export default async function AssetsPage({ searchParams }: { searchParams: Searc
     for (const usage of usages) usageCount.set(usage.assetId, (usageCount.get(usage.assetId) ?? 0) + 1);
     const visible = rows.filter((asset) => {
       const meta = parseAssetMetadata(asset.metadata);
-      const haystack = `${asset.title ?? ""} ${asset.altText ?? ""} ${meta.originalName ?? ""} ${(meta.tags ?? []).join(" ")} ${meta.platform ?? ""} ${meta.creativeId ?? ""}`.toLowerCase();
+      const haystack = `${asset.title ?? ""} ${asset.altText ?? ""} ${meta.originalName ?? ""} ${(meta.tags ?? []).join(" ")} ${meta.platform ?? ""} ${meta.creativeId ?? ""} ${meta.adHeadline ?? ""} ${meta.adPrimaryText ?? ""}`.toLowerCase();
       const count = usageCount.get(asset.id) ?? 0;
-      return (!q || haystack.includes(q)) && (!brandFilter || asset.brandId === brandFilter) && (!typeFilter || asset.type === typeFilter) && (!tagFilter || (meta.tags ?? []).includes(tagFilter)) && (!usageFilter || (usageFilter === "used" ? count > 0 : count === 0));
+      return (!q || haystack.includes(q)) && (!brandFilter || asset.brandId === brandFilter) && (!campaignFilter || meta.campaignId === campaignFilter) && (!typeFilter || asset.type === typeFilter) && (!tagFilter || (meta.tags ?? []).includes(tagFilter)) && (!usageFilter || (usageFilter === "used" ? count > 0 : count === 0));
     });
 
     return <main className="shell compact-shell">
-      <section className="section-heading"><p className="eyebrow">Asset Library</p><h1>One source for campaign creative.</h1><p>Stable asset IDs, searchable metadata and explicit usage tracking keep page content independent from raw storage URLs.</p></section>
-      {canManage && <AssetUpload brands={brandRows} campaigns={campaignRows} />}
+      <section className="section-heading"><p className="eyebrow">Ad creative</p><h1>Keep campaign visuals and copy together.</h1><p>Upload the exact Meta/TikTok creative, tie it to a campaign, then create a landing page from the same message.</p></section>
+      {canManage && <AssetUpload brands={brandRows} campaigns={campaignRows} initialBrandId={brandFilter} initialCampaignId={campaignFilter} initialPlatform={platformPrefill} />}
       <form className="asset-filters" action="/assets">
-        <input name="q" defaultValue={param(query.q)} placeholder="Search title, tag, creative ID…" />
-        <select name="brand" defaultValue={brandFilter}><option value="">All brands</option>{brandRows.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select>
-        <select name="type" defaultValue={typeFilter}><option value="">All types</option><option value="image">Image</option><option value="video">Video</option><option value="gif">GIF</option><option value="svg">SVG</option></select>
-        <input name="tag" defaultValue={tagFilter} placeholder="Tag" />
-        <select name="usage" defaultValue={usageFilter}><option value="">Any usage</option><option value="used">Used</option><option value="unused">Unused</option></select>
+        <input name="q" defaultValue={param(query.q)} placeholder="Search ad headline, title, tag…" />
+        <select name="brand" defaultValue={brandFilter}><option value="">All products</option>{brandRows.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select>
+        <select name="campaign" defaultValue={campaignFilter}><option value="">All campaigns</option>{campaignRows.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.name}</option>)}</select>
+        <select name="type" defaultValue={typeFilter}><option value="">Any media</option><option value="image">Image</option><option value="video">Video</option><option value="gif">GIF</option><option value="svg">SVG</option></select>
+        <select name="usage" defaultValue={usageFilter}><option value="">Any usage</option><option value="used">Used on pages</option><option value="unused">Not used on pages</option></select>
         <button type="submit">Filter</button><Link href="/assets">Reset</Link>
       </form>
       <div className="asset-grid">
@@ -67,10 +69,10 @@ export default async function AssetsPage({ searchParams }: { searchParams: Searc
           const isVisual = asset.type !== "video";
           return <Link className="asset-card" href={`/assets/${asset.id}`} key={asset.id}>
             <div className="asset-preview" role={isVisual ? "img" : undefined} aria-label={isVisual ? asset.altText || asset.title || "Asset preview" : undefined} style={isVisual ? { backgroundImage: `url(${JSON.stringify(asset.storageKey)})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>{asset.type === "video" ? <span>VIDEO</span> : null}</div>
-            <div className="asset-card-body"><div><strong>{asset.title || meta.originalName || "Untitled asset"}</strong><span>{asset.brandName} · {asset.type}</span></div><code>{asset.id}</code><p>{asset.width && asset.height ? `${asset.width}×${asset.height} · ` : ""}{asset.fileSize ? `${Math.round(asset.fileSize / 1024)} KB · ` : ""}{count} usage{count === 1 ? "" : "s"}</p>{meta.tags?.length ? <div className="tag-row">{meta.tags.slice(0, 4).map((tag) => <span key={tag}>{tag}</span>)}</div> : null}</div>
+            <div className="asset-card-body"><div><strong>{meta.adHeadline || asset.title || meta.originalName || "Untitled creative"}</strong><span>{asset.brandName} · {meta.platform || asset.type}</span></div><code>{asset.id}</code><p>{meta.adCta ? `${meta.adCta} · ` : ""}{count} page usage{count === 1 ? "" : "s"}</p>{meta.tags?.length ? <div className="tag-row">{meta.tags.slice(0, 4).map((tag) => <span key={tag}>{tag}</span>)}</div> : null}</div>
           </Link>;
         })}
-        {visible.length === 0 && <div className="empty-state">No assets match these filters.</div>}
+        {visible.length === 0 && <div className="empty-state">No ad creatives match these filters.</div>}
       </div>
     </main>;
   } finally { await client.end(); }
