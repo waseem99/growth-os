@@ -11,3 +11,12 @@ test("the admin deployment also serves the configured public landing page", asyn
   expect(visitor?.value).toBeTruthy();
   expect(visitor?.httpOnly).toBe(true);
 });
+
+test("the unified product host keeps robots and sitemap behavior", async ({ request }) => {
+  const robots = await request.get("http://skillup.localhost:3001/robots.txt");
+  expect(robots.status()).toBe(200);
+  expect(await robots.text()).toContain("Sitemap: http://skillup.localhost/sitemap.xml");
+  const sitemap = await request.get("http://skillup.localhost:3001/sitemap.xml");
+  expect(sitemap.status()).toBe(200);
+  expect(await sitemap.text()).toContain("http://skillup.localhost/ai-games");
+});
