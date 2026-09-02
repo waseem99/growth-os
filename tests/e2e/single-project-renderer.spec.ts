@@ -25,9 +25,10 @@ test("the unified product host keeps robots and sitemap behavior", async ({ requ
 test("a GrowthOS Vercel alias resolves by brand slug and stays noindex", async ({ request }) => {
   const page = await request.get("http://127.0.0.1:3001/ai-games", { headers: { host: platformAlias } });
   expect(page.status()).toBe(200);
+  expect(page.headers()["x-robots-tag"]).toBe("noindex, nofollow");
   const html = await page.text();
   expect(html).toContain("Learn AI skills through games");
-  expect(html).toMatch(/name="robots" content="noindex, nofollow"/i);
+  expect(html).toContain("https://growthos-skillup.vercel.app/ai-games");
 
   const robots = await request.get("http://127.0.0.1:3001/robots.txt", { headers: { host: platformAlias } });
   expect(robots.status()).toBe(200);
