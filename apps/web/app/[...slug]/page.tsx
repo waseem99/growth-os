@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { PageRenderer, pageDocumentSchema, pageSeoSchema, type BrandRenderTheme } from "@growth-os/page-engine";
-import { resolvePublishedPage } from "../../lib/brand-resolution";
+import { isPlatformAliasHost, resolvePublishedPage } from "../../lib/brand-resolution";
 import { resolveExperimentVariant } from "../../lib/experiment-resolution";
 import { resolvePageAssets } from "../../lib/page-assets";
 import { canonicalFor } from "../../lib/public-seo";
@@ -18,6 +18,7 @@ const one = (value: string | string[] | undefined) => Array.isArray(value) ? val
 async function getRouteSnapshot(params: RouteProps["params"], searchParams: RouteProps["searchParams"]) {
   const [{ slug }, query, requestHeaders] = await Promise.all([params, searchParams, headers()]);
   const host = requestHeaders.get("host") ?? "";
+  const platformAlias = isPlatformAliasHost(host);
   const page = await resolvePublishedPage(host, slug.join("/"));
   if (!page) return null;
   const testTraffic = one(query.go_test) === "1";
@@ -26,6 +27,7 @@ async function getRouteSnapshot(params: RouteProps["params"], searchParams: Rout
   const experiment = await resolveExperimentVariant(page.pageId, visitor, forcedVariantId);
   return {
     page,
+    platformAlias,
     content: experiment?.content ?? page.content,
     seo: experiment?.seo ?? page.seo,
     versionId: experiment?.versionId ?? page.versionId,
@@ -49,7 +51,7 @@ export async function generateMetadata({ params, searchParams }: RouteProps): Pr
   const socialId = seo.data.socialAssetId ?? page.defaultSocialAssetId;
   const assetMap = parsed.success ? await resolvePageAssets(parsed.data, [socialId]) : new Map();
   const social = assetMap.get(socialId ?? "");
-  const canIndex = seo.data.index && !snapshot.testTraffic && !page.platformAlias;
+  const canIndex = seo.data.index && !snapshot.testTraffic && !snapshot.platformAlias;
   return {
     title: seo.data.title,
     description: seo.data.description,
