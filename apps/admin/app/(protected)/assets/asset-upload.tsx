@@ -22,22 +22,26 @@ async function imageDimensions(file: File): Promise<{ width: number | null; heig
   } finally { URL.revokeObjectURL(objectUrl); }
 }
 
-export function AssetUpload({ brands, campaigns }: { brands: AssetBrandOption[]; campaigns: AssetCampaignOption[] }) {
+export function AssetUpload({ brands, campaigns, initialBrandId = "", initialCampaignId = "", initialPlatform = "" }: { brands: AssetBrandOption[]; campaigns: AssetCampaignOption[]; initialBrandId?: string; initialCampaignId?: string; initialPlatform?: string }) {
   const router = useRouter();
-  const [brandId, setBrandId] = useState(brands[0]?.id ?? "");
-  const [campaignId, setCampaignId] = useState("");
+  const initialBrand = brands.some((brand) => brand.id === initialBrandId) ? initialBrandId : brands[0]?.id ?? "";
+  const [brandId, setBrandId] = useState(initialBrand);
+  const [campaignId, setCampaignId] = useState(campaigns.some((campaign) => campaign.id === initialCampaignId && campaign.brandId === initialBrand) ? initialCampaignId : "");
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [altText, setAltText] = useState("");
   const [tags, setTags] = useState("");
-  const [platform, setPlatform] = useState("");
+  const [platform, setPlatform] = useState(initialPlatform);
   const [creativeId, setCreativeId] = useState("");
+  const [adHeadline, setAdHeadline] = useState("");
+  const [adPrimaryText, setAdPrimaryText] = useState("");
+  const [adCta, setAdCta] = useState("");
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
   const compatibleCampaigns = useMemo(() => campaigns.filter((campaign) => campaign.brandId === brandId), [campaigns, brandId]);
 
   const submit = () => startTransition(async () => {
-    if (!file || !brandId) { setMessage("Choose a brand and file."); return; }
+    if (!file || !brandId) { setMessage("Choose a product and file."); return; }
     setMessage("Uploading…");
     try {
       const dimensions = await imageDimensions(file);
@@ -58,10 +62,13 @@ export function AssetUpload({ brands, campaigns }: { brands: AssetBrandOption[];
         tags,
         platform,
         creativeId,
+        adHeadline,
+        adPrimaryText,
+        adCta,
         ...dimensions
       });
-      setMessage("Asset uploaded.");
-      setFile(null); setTitle(""); setAltText(""); setTags(""); setPlatform(""); setCreativeId("");
+      setMessage("Ad creative uploaded. You can now create a matching page from the campaign.");
+      setFile(null); setTitle(""); setAltText(""); setTags(""); setCreativeId(""); setAdHeadline(""); setAdPrimaryText(""); setAdCta("");
       router.push(`/assets/${result.id}`);
       router.refresh();
     } catch (error) {
@@ -70,17 +77,20 @@ export function AssetUpload({ brands, campaigns }: { brands: AssetBrandOption[];
   });
 
   return <section className="asset-upload-card">
-    <div><p className="eyebrow">New asset</p><h2>Upload campaign creative</h2><p>Images/GIF/SVG up to 20 MB; video up to 250 MB. Uploads go directly to approved Blob storage.</p></div>
+    <div><p className="eyebrow">Ad creative</p><h2>Upload the exact Meta/TikTok creative</h2><p>Keep the ad visual and copy here so the matching landing page can start from the same message.</p></div>
     <div className="asset-upload-grid">
-      <label>Brand<select value={brandId} onChange={(event) => { setBrandId(event.target.value); setCampaignId(""); }}>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
+      <label>Product<select value={brandId} onChange={(event) => { setBrandId(event.target.value); setCampaignId(""); }}>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
       <label>Campaign<select value={campaignId} onChange={(event) => setCampaignId(event.target.value)}><option value="">No campaign</option>{compatibleCampaigns.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.name}</option>)}</select></label>
-      <label className="asset-file">File<input type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif,image/svg+xml,video/mp4,video/webm,video/quicktime" onChange={(event) => { const next = event.target.files?.[0] ?? null; setFile(next); if (next && !title) setTitle(next.name.replace(/\.[^.]+$/, "")); }} /></label>
-      <label>Title<input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} /></label>
+      <label className="asset-file">Ad image/video<input type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif,image/svg+xml,video/mp4,video/webm,video/quicktime" onChange={(event) => { const next = event.target.files?.[0] ?? null; setFile(next); if (next && !title) setTitle(next.name.replace(/\.[^.]+$/, "")); }} /></label>
+      <label>Internal title<input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} /></label>
+      <label>Ad headline<input value={adHeadline} onChange={(event) => setAdHeadline(event.target.value)} maxLength={240} placeholder="The headline people see in the ad" /></label>
+      <label>Primary ad text<textarea value={adPrimaryText} onChange={(event) => setAdPrimaryText(event.target.value)} maxLength={700} placeholder="Main Meta/TikTok message" /></label>
+      <label>CTA label<input value={adCta} onChange={(event) => setAdCta(event.target.value)} maxLength={80} placeholder="Learn more / Subscribe / Get offer" /></label>
       <label>Alt text<input value={altText} onChange={(event) => setAltText(event.target.value)} maxLength={300} placeholder="Describe meaningful images" /></label>
       <label>Tags<input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="hero, ramadan, meta" /></label>
-      <label>Platform<input value={platform} onChange={(event) => setPlatform(event.target.value)} placeholder="Meta / Google / TikTok" /></label>
-      <label>Creative ID<input value={creativeId} onChange={(event) => setCreativeId(event.target.value)} /></label>
+      <label>Platform<input value={platform} onChange={(event) => setPlatform(event.target.value)} placeholder="Meta / TikTok" /></label>
+      <label>Ad / creative ID<input value={creativeId} onChange={(event) => setCreativeId(event.target.value)} /></label>
     </div>
-    <div className="asset-upload-actions"><button className="primary-button" type="button" disabled={isPending || !file || !brandId} onClick={submit}>{isPending ? "Working…" : "Upload asset"}</button>{message && <span>{message}</span>}</div>
+    <div className="asset-upload-actions"><button className="primary-button" type="button" disabled={isPending || !file || !brandId} onClick={submit}>{isPending ? "Uploading…" : "Upload ad creative"}</button>{message && <span>{message}</span>}</div>
   </section>;
 }

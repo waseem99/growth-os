@@ -25,7 +25,7 @@ export default async function BrandDetailPage({ params }: { params: Promise<{ id
 
   return (
     <main className="shell compact-shell">
-      <section className="section-heading"><p className="eyebrow">Brand configuration</p><h1>{brand.name}</h1><p>Only approved tokens/defaults are editable here. Integration secrets are intentionally not part of this configuration.</p></section>
+      <section className="section-heading"><p className="eyebrow">Product setup · one time</p><h1>{brand.name}</h1><p>Set the product identity and one acquisition hostname here once. Campaign pages will reuse these settings automatically.</p></section>
       <div className="brand-config-grid">
         <form className="settings-card" action={updateBrand}>
           <input type="hidden" name="id" value={brand.id} />
@@ -42,13 +42,13 @@ export default async function BrandDetailPage({ params }: { params: Promise<{ id
           <label>Terms URL<input name="termsUrl" type="url" defaultValue={field(brand.defaults, "termsUrl")} /></label>
           <label>Privacy URL<input name="privacyUrl" type="url" defaultValue={field(brand.defaults, "privacyUrl")} /></label>
           <label>Subscription destination<input name="subscriptionUrl" type="url" defaultValue={field(brand.defaults, "subscriptionUrl")} /></label>
-          <button className="primary-button" type="submit">Save brand</button>
+          <button className="primary-button" type="submit">Save product</button>
         </form>
-        <aside className="theme-preview" style={{ background, color: text, borderRadius: field(brand.theme, "radius", "16px"), fontFamily: field(brand.theme, "fontFamily", "Inter, system-ui, sans-serif") }}><span style={{ color: primary }}>Live token preview</span><h2>{brand.name}</h2><p>Campaign pages inherit these defaults unless a safe template preset overrides them.</p><button type="button" style={{ background: primary, color: "#fff", borderRadius: field(brand.theme, "radius", "16px") }}>CTA example</button><div style={{ background: secondary }} /></aside>
+        <aside className="theme-preview" style={{ background, color: text, borderRadius: field(brand.theme, "radius", "16px"), fontFamily: field(brand.theme, "fontFamily", "Inter, system-ui, sans-serif") }}><span style={{ color: primary }}>Landing-page preview</span><h2>{brand.name}</h2><p>Every campaign page inherits these defaults unless you override them in the page editor.</p><button type="button" style={{ background: primary, color: "#fff", borderRadius: field(brand.theme, "radius", "16px") }}>CTA example</button><div style={{ background: secondary }} /></aside>
       </div>
-      <section className="domain-section"><div className="section-heading"><p className="eyebrow">Domains</p><h2>Host mapping</h2></div>
-        <form className="inline-form" action={addDomain}><input type="hidden" name="brandId" value={brand.id} /><input name="hostname" placeholder="go.example.com" required /><label className="check-label"><input name="isPrimary" type="checkbox" /> Primary</label><button className="primary-button" type="submit">Add domain</button></form>
-        <div className="table-list">{domainRows.map((domain) => <form className="domain-row" action={updateDomain} key={domain.id}><input type="hidden" name="id" value={domain.id} /><input type="hidden" name="brandId" value={brand.id} /><strong>{domain.hostname}</strong><select name="status" defaultValue={domain.status}><option value="pending">Pending DNS</option><option value="verified">Verified</option><option value="disabled">Disabled</option></select><label className="check-label"><input name="isPrimary" type="checkbox" defaultChecked={domain.isPrimary} /> Primary</label><button type="submit">Save</button></form>)}</div>
+      <section className="domain-section"><div className="section-heading"><p className="eyebrow">Publishing hostname · one time</p><h2>Where landing pages for this product live</h2><p>Example: go.yourproduct.com. The first hostname becomes primary automatically; campaign pages then inherit it.</p></div>
+        <form className="inline-form" action={addDomain}><input type="hidden" name="brandId" value={brand.id} /><input name="hostname" placeholder="go.example.com" required /><label className="check-label"><input name="isPrimary" type="checkbox" /> Make primary</label><button className="primary-button" type="submit">Add hostname</button></form>
+        <div className="table-list">{domainRows.map((domain) => <form className="domain-row" action={updateDomain} key={domain.id}><input type="hidden" name="id" value={domain.id} /><input type="hidden" name="brandId" value={brand.id} /><strong>{domain.hostname}</strong><select name="status" defaultValue={domain.status}><option value="pending">Not connected yet</option><option value="verified">Connected</option><option value="disabled">Disabled</option></select><label className="check-label"><input name="isPrimary" type="checkbox" defaultChecked={domain.isPrimary} /> Primary</label><button type="submit">Save</button></form>)}</div>
       </section>
     </main>
   );

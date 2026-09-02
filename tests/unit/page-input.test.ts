@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { pageDocumentSchema } from "@growth-os/page-engine";
-import { instantiatePageTemplate, normalizePageSlug, reseedPageDocument } from "../../apps/admin/lib/page-input";
+import { applyAdCreative, instantiatePageTemplate, normalizePageSlug, reseedPageDocument } from "../../apps/admin/lib/page-input";
 
 describe("page lifecycle helpers", () => {
   it("instantiates valid independent template documents", () => {
@@ -18,6 +18,18 @@ describe("page lifecycle helpers", () => {
     const sourceBenefits = source.blocks.find((block) => block.type === "benefits");
     const copyBenefits = copy.blocks.find((block) => block.type === "benefits");
     expect(copyBenefits?.items[0]?.id).not.toBe(sourceBenefits?.items[0]?.id);
+  });
+
+  it("seeds the landing-page hero and CTA from the saved ad creative", () => {
+    const source = instantiatePageTemplate("subscription-acquisition");
+    const creativeAssetId = "11111111-1111-4111-8111-111111111111";
+    const next = applyAdCreative(source, { assetId: creativeAssetId, headline: "Same headline as Meta", primaryText: "Same primary ad message", cta: "Get offer" });
+    const hero = next.blocks.find((block) => block.type === "hero");
+    expect(hero?.headline).toBe("Same headline as Meta");
+    expect(hero?.subheadline).toBe("Same primary ad message");
+    expect(hero?.heroAssetId).toBe(creativeAssetId);
+    const subscription = next.blocks.find((block) => block.type === "form" && block.variant === "subscription");
+    expect(subscription?.ctaLabel).toBe("Get offer");
   });
 
   it("normalizes safe predictable slugs", () => {

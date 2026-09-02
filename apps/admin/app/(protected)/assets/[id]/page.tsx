@@ -30,29 +30,31 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
     const draftPageIds = [...new Set(usages.filter((usage) => usage.entityType === "landing_page_draft").map((usage) => usage.entityId))];
 
     return <main className="shell compact-shell">
-      <div className="asset-detail-heading"><div><Link href="/assets">← Asset Library</Link><p className="eyebrow">{asset.brandName} · {asset.type}</p><h1>{asset.title || meta.originalName || "Untitled asset"}</h1><code>{asset.id}</code>{canUseAi ? <Link className="ai-inline-link" href={`/assets/${id}/ai`}>AI metadata assistant →</Link> : null}</div><div className="asset-detail-preview">{asset.type === "video" ? <video src={asset.storageKey} controls preload="metadata" /> : <a href={asset.storageKey} target="_blank" rel="noreferrer">Open stored asset</a>}</div></div>
+      <div className="asset-detail-heading"><div><Link href="/assets">← Ad creative</Link><p className="eyebrow">{asset.brandName} · {asset.type}</p><h1>{meta.adHeadline || asset.title || meta.originalName || "Untitled creative"}</h1><code>{asset.id}</code>{canUseAi ? <Link className="ai-inline-link" href={`/assets/${id}/ai`}>AI metadata assistant →</Link> : null}</div><div className="asset-detail-preview">{asset.type === "video" ? <video src={asset.storageKey} controls preload="metadata" /> : <a href={asset.storageKey} target="_blank" rel="noreferrer">Open stored creative</a>}</div></div>
 
       <div className="asset-detail-grid">
         <section className="settings-card">
-          <h2>Metadata</h2>
-          <p>{asset.mimeType} · {asset.fileSize ? `${Math.round(asset.fileSize / 1024)} KB` : "size unknown"}{asset.width && asset.height ? ` · ${asset.width}×${asset.height}` : ""}</p>
+          <h2>Ad message</h2><p>Keep these fields aligned with the live Meta/TikTok ad. A matching page can seed its hero from them.</p>
           {canManage ? <form action={async (formData) => {
             "use server";
-            await updateAssetMetadata({ id, title: String(formData.get("title") ?? ""), altText: String(formData.get("altText") ?? ""), tags: String(formData.get("tags") ?? ""), campaignId: String(formData.get("campaignId") ?? "") || null, platform: String(formData.get("platform") ?? ""), creativeId: String(formData.get("creativeId") ?? "") });
+            await updateAssetMetadata({ id, title: String(formData.get("title") ?? ""), altText: String(formData.get("altText") ?? ""), tags: String(formData.get("tags") ?? ""), campaignId: String(formData.get("campaignId") ?? "") || null, platform: String(formData.get("platform") ?? ""), creativeId: String(formData.get("creativeId") ?? ""), adHeadline: String(formData.get("adHeadline") ?? ""), adPrimaryText: String(formData.get("adPrimaryText") ?? ""), adCta: String(formData.get("adCta") ?? "") });
           }}>
-            <label>Title<input name="title" defaultValue={asset.title ?? ""} /></label>
+            <label>Ad headline<input name="adHeadline" defaultValue={meta.adHeadline ?? ""} /></label>
+            <label>Primary ad text<textarea name="adPrimaryText" defaultValue={meta.adPrimaryText ?? ""} /></label>
+            <label>CTA label<input name="adCta" defaultValue={meta.adCta ?? ""} /></label>
+            <label>Internal title<input name="title" defaultValue={asset.title ?? ""} /></label>
             <label>Alt text<input name="altText" defaultValue={asset.altText ?? ""} /></label>
             <label>Tags<input name="tags" defaultValue={(meta.tags ?? []).join(", ")} /></label>
             <label>Campaign<select name="campaignId" defaultValue={meta.campaignId ?? ""}><option value="">No campaign</option>{campaignRows.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.name}</option>)}</select></label>
             <label>Platform<input name="platform" defaultValue={meta.platform ?? ""} /></label>
-            <label>Creative ID<input name="creativeId" defaultValue={meta.creativeId ?? ""} /></label>
-            <button className="primary-button" type="submit">Save metadata</button>
+            <label>Ad / creative ID<input name="creativeId" defaultValue={meta.creativeId ?? ""} /></label>
+            <button className="primary-button" type="submit">Save ad message</button>
           </form> : <p>Read-only access.</p>}
         </section>
 
         <section className="settings-card">
           <h2>Where used</h2>
-          {usages.length === 0 ? <p>No tracked usages. This asset can be deleted safely if it is not configured as a brand default.</p> : <div className="usage-list">{usages.map((usage) => <div key={usage.id}><div><strong>{usage.pageName || usage.entityType}</strong><code>{usage.fieldPath}</code></div>{usage.entityType === "landing_page_draft" ? <Link href={`/pages/${usage.entityId}`}>Open draft</Link> : <span>{usage.entityType}</span>}</div>)}</div>}
+          {usages.length === 0 ? <p>No tracked page usages yet.</p> : <div className="usage-list">{usages.map((usage) => <div key={usage.id}><div><strong>{usage.pageName || usage.entityType}</strong><code>{usage.fieldPath}</code></div>{usage.entityType === "landing_page_draft" ? <Link href={`/pages/${usage.entityId}`}>Open draft</Link> : <span>{usage.entityType}</span>}</div>)}</div>}
         </section>
       </div>
 

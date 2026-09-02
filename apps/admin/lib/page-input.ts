@@ -51,6 +51,22 @@ export function reseedPageDocument(document: PageDocument): PageDocument {
   return pageDocumentSchema.parse(reseed(document));
 }
 
+export function applyAdCreative(document: PageDocument, creative: { assetId: string; headline?: string | null; primaryText?: string | null; cta?: string | null }): PageDocument {
+  const raw = structuredClone(document) as unknown as { blocks?: Array<Record<string, unknown>> };
+  const blocks = Array.isArray(raw.blocks) ? raw.blocks : [];
+  const hero = blocks.find((block) => block.type === "hero");
+  if (hero) {
+    if (creative.headline) hero.headline = creative.headline;
+    if (creative.primaryText) hero.subheadline = creative.primaryText;
+    hero.heroAssetId = creative.assetId;
+  }
+  const cta = blocks.find((block) => block.type === "cta");
+  if (cta && creative.cta) cta.ctaLabel = creative.cta;
+  const subscriptionForm = blocks.find((block) => block.type === "form" && block.variant === "subscription");
+  if (subscriptionForm && creative.cta) subscriptionForm.ctaLabel = creative.cta;
+  return pageDocumentSchema.parse(raw);
+}
+
 export function normalizePageSlug(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120);
 }
