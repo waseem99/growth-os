@@ -24,6 +24,12 @@ describe("GrowthOS page engine", () => {
     expect(promo.blocks.find((b) => b.type === "hero")?.variant).toBe("promotional");
   });
 
+  it("accepts the storefront-aligned BizB marketplace preset", () => {
+    const bizb = structuredClone(skillupCleanReference);
+    bizb.stylePreset = "bizb-marketplace";
+    expect(pageDocumentSchema.parse(bizb).stylePreset).toBe("bizb-marketplace");
+  });
+
   it("has an explicit version boundary for every registered P0 block", () => {
     expect(BLOCK_TYPES).toEqual([
       "header", "hero", "benefits", "showcase", "socialProof", "steps", "pricing", "comparison",
