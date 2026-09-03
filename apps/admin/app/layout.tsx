@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "@growth-os/page-engine/styles.css";
+import "@growth-os/page-engine/bizb-single-screen.css";
 import "./globals.css";
 import "./operator-ux.css";
 import "./publishing.css";
