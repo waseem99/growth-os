@@ -13,6 +13,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Campaign SEO metadata is data-driven and must be present in the initial
+  // document head for crawlers, ad validators, and deterministic release audits.
+  htmlLimitedBots: /.*/,
   transpilePackages: ["@growth-os/config", "@growth-os/db", "@growth-os/experiments", "@growth-os/page-engine", "@growth-os/tracking"],
   images: {
     formats: ["image/avif", "image/webp"],
