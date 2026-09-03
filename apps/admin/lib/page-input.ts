@@ -6,6 +6,7 @@ import {
   type PageDocument,
   type PageDocumentInput
 } from "@growth-os/page-engine";
+import { CONVERSION_EVENT_NAMES } from "@growth-os/tracking";
 
 const minimalInput: PageDocumentInput = {
   schemaVersion: 1,
@@ -25,6 +26,34 @@ export const PAGE_TEMPLATE_OPTIONS = [
   { key: "game-acquisition", label: "Game Acquisition" },
   { key: "minimal", label: "Minimal" }
 ] as const;
+
+export type ConversionGoal = (typeof CONVERSION_EVENT_NAMES)[number];
+
+export const CONVERSION_GOAL_OPTIONS: ReadonlyArray<{ value: ConversionGoal; label: string }> = [
+  { value: "signup_complete", label: "Signup complete" },
+  { value: "purchase", label: "Purchase" },
+  { value: "subscription_started", label: "Subscription started" }
+];
+
+const legacyConversionGoalAliases: Record<string, ConversionGoal> = {
+  signup: "signup_complete",
+  registration: "signup_complete",
+  seller_registration: "signup_complete",
+  subscription: "subscription_started"
+};
+
+export function canonicalConversionGoal(value: unknown): ConversionGoal | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return null;
+  const alias = legacyConversionGoalAliases[normalized];
+  if (alias) return alias;
+  return CONVERSION_EVENT_NAMES.find((goal) => goal === normalized) ?? null;
+}
+
+export function defaultConversionGoalForTemplate(key: string): ConversionGoal {
+  return key === "subscription-acquisition" ? "subscription_started" : "signup_complete";
+}
 
 function sourceForTemplate(key: string): PageDocumentInput {
   if (key === "subscription-acquisition") return skillupCleanReference;

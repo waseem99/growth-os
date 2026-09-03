@@ -5,7 +5,7 @@ import { brands, campaigns, getDatabase, landingPages } from "@growth-os/db";
 import { pageDocumentSchema, type BrandRenderTheme } from "@growth-os/page-engine";
 import { hasPermission } from "@/lib/authz";
 import { requireGrowthUser } from "@/lib/user-access";
-import { instantiatePageTemplate } from "@/lib/page-input";
+import { canonicalConversionGoal, defaultConversionGoalForTemplate, instantiatePageTemplate } from "@/lib/page-input";
 import { PageEditor } from "../page-editor";
 
 export default async function PageEditorRoute({ params }: { params: Promise<{ id: string }> }) {
@@ -33,6 +33,7 @@ export default async function PageEditorRoute({ params }: { params: Promise<{ id
     ]);
     const parsed = pageDocumentSchema.safeParse(page.draftContent);
     const document = parsed.success ? parsed.data : instantiatePageTemplate("minimal");
+    const conversionGoal = canonicalConversionGoal(page.conversionGoal) ?? defaultConversionGoalForTemplate(document.templateKey);
     return <>
       <div className="page-lifecycle-strip"><span>Draft revision {page.draftRevision}</span><div><Link href={`/preview/pages/${id}`} target="_blank">Preview draft ↗</Link>{hasPermission(user.role, "ai:use") ? <Link href={`/pages/${id}/ai`}>AI assistant →</Link> : null}<Link href={`/pages/${id}/publishing`}>Publishing & versions →</Link></div></div>
       <PageEditor
@@ -42,7 +43,7 @@ export default async function PageEditorRoute({ params }: { params: Promise<{ id
           slug: page.slug,
           brandId: page.brandId,
           campaignId: page.campaignId,
-          conversionGoal: page.conversionGoal ?? "subscription",
+          conversionGoal,
           revision: page.draftRevision,
           status: page.status,
           document
