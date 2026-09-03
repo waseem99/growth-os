@@ -13,6 +13,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // The unified deployment also serves campaign pages. Keep their dynamic SEO
+  // metadata in the initial document head for crawlers and paid-media checks.
+  htmlLimitedBots: /.*/,
   transpilePackages: ["@growth-os/ai", "@growth-os/analytics", "@growth-os/config", "@growth-os/db", "@growth-os/experiments", "@growth-os/page-engine"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
