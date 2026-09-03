@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "alias": [
+    "growthos-bizb.vercel.app",
     "growthos-bizly-medan.vercel.app",
     "growthos-skillup.vercel.app",
     "growthos-jalwa.vercel.app",
