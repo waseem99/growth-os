@@ -69,7 +69,7 @@ export const pageBlockSchema = z.discriminatedUnion("type", [
 export const pageDocumentSchema = z.object({
   schemaVersion: z.literal(1),
   templateKey: z.string().min(1).max(100),
-  stylePreset: z.enum(["clean-light", "premium-purple", "campaign-dark", "promotion", "minimal"]),
+  stylePreset: z.enum(["clean-light", "premium-purple", "campaign-dark", "promotion", "minimal", "bizb-marketplace"]),
   blocks: z.array(pageBlockSchema).min(1).max(40)
 }).superRefine((page, ctx) => {
   const ids = new Set<string>();
