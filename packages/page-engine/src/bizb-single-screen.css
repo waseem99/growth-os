@@ -1,0 +1,395 @@
+/* BizB single-screen acquisition override.
+   The campaign page is intentionally a conversion surface, not a long-form microsite:
+   one viewport, no horizontal overflow, immediate CTA, compact proof, and portrait/
+   landscape mobile handling. The selectors are tenant-preset scoped so other brands
+   and page presets are unaffected. */
+
+.go-preset--bizb-marketplace {
+  width: 100%;
+  max-width: 100vw;
+  height: 100svh;
+  min-height: 100svh;
+  max-height: 100svh;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  background: #fff;
+}
+
+.go-preset--bizb-marketplace > * {
+  min-width: 0;
+}
+
+.go-preset--bizb-marketplace .go-header {
+  width: min(1120px, calc(100% - 32px));
+  min-height: 58px;
+  padding: 8px 0;
+  border-bottom: 0;
+}
+
+.go-preset--bizb-marketplace .go-header::before {
+  width: 40px;
+  height: 48px;
+  flex-basis: 40px;
+}
+
+.go-preset--bizb-marketplace .go-header > span:last-child {
+  padding: 7px 11px;
+  font-size: .72rem;
+}
+
+.go-preset--bizb-marketplace .go-hero {
+  width: min(1120px, calc(100% - 32px));
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  grid-template-columns: minmax(0, .9fr) minmax(320px, 1.1fr);
+  gap: clamp(20px, 3vw, 42px);
+  padding: clamp(10px, 2vh, 22px) 0;
+}
+
+.go-preset--bizb-marketplace .go-hero > div:first-child {
+  align-self: center;
+  min-width: 0;
+}
+
+.go-preset--bizb-marketplace .go-kicker {
+  padding: 6px 10px;
+  font-size: clamp(.62rem, 1vw, .72rem);
+}
+
+.go-preset--bizb-marketplace .go-hero h1 {
+  max-width: 640px;
+  margin: clamp(8px, 1.4vh, 14px) 0 8px;
+  font-size: clamp(2.7rem, 5.2vw, 5.3rem);
+  line-height: .87;
+}
+
+.go-preset--bizb-marketplace .go-highlight {
+  font-size: clamp(1.7rem, 3.2vw, 3.15rem);
+  line-height: 1.02;
+}
+
+.go-preset--bizb-marketplace .go-hero p {
+  max-width: 560px;
+  margin: clamp(8px, 1.5vh, 14px) 0 0;
+  font-size: clamp(.82rem, 1.25vw, .98rem);
+  line-height: 1.48;
+}
+
+.go-preset--bizb-marketplace .go-hero-media {
+  height: 100%;
+  min-height: 0;
+  max-height: min(58vh, 520px);
+  border-radius: 18px;
+  box-shadow: 0 16px 42px rgb(35 31 32 / .13);
+}
+
+.go-preset--bizb-marketplace .go-hero-media::after {
+  right: 10px;
+  bottom: 10px;
+  padding: 7px 10px;
+  font-size: .6rem;
+}
+
+/* Only the compact acquisition proof row is allowed below the hero. Long-form
+   steps/comparison/FAQ sections from older published versions are suppressed. */
+.go-preset--bizb-marketplace .go-section:not(.go-cta),
+.go-preset--bizb-marketplace .go-footer,
+.go-preset--bizb-marketplace .go-sticky {
+  display: none;
+}
+
+.go-preset--bizb-marketplace .go-items {
+  width: min(1120px, calc(100% - 32px));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 0 clamp(7px, 1.3vh, 12px);
+}
+
+.go-preset--bizb-marketplace .go-items article {
+  min-width: 0;
+  min-height: 0;
+  gap: 3px;
+  padding: 9px 11px;
+  border-top-width: 3px;
+  box-shadow: none;
+}
+
+.go-preset--bizb-marketplace .go-items b {
+  font-size: clamp(.72rem, 1.1vw, .86rem);
+  line-height: 1.2;
+}
+
+.go-preset--bizb-marketplace .go-items span {
+  font-size: clamp(.64rem, .9vw, .76rem);
+  line-height: 1.3;
+}
+
+.go-preset--bizb-marketplace .go-cta {
+  width: 100%;
+  max-width: none;
+  min-height: 64px;
+  margin: 0;
+  border-radius: 0;
+  padding: 9px max(16px, calc((100vw - 1120px) / 2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 3vw, 34px);
+  background: #231f20;
+}
+
+.go-preset--bizb-marketplace .go-cta > h2 {
+  margin: 0;
+  text-align: left;
+  font-family: Lato, Arial, sans-serif;
+  font-size: clamp(.94rem, 1.6vw, 1.25rem);
+  font-weight: 900;
+  letter-spacing: -.01em;
+}
+
+.go-preset--bizb-marketplace .go-cta > p {
+  display: none;
+}
+
+.go-preset--bizb-marketplace .go-cta a {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 10px 22px;
+  font-size: .9rem;
+  white-space: nowrap;
+}
+
+@media (max-height: 720px) and (min-width: 721px) {
+  .go-preset--bizb-marketplace .go-header {
+    min-height: 48px;
+    padding: 4px 0;
+  }
+
+  .go-preset--bizb-marketplace .go-header::before {
+    width: 32px;
+    height: 38px;
+    flex-basis: 32px;
+  }
+
+  .go-preset--bizb-marketplace .go-hero {
+    padding: 7px 0;
+  }
+
+  .go-preset--bizb-marketplace .go-hero h1 {
+    font-size: clamp(2.35rem, 4.7vw, 4.3rem);
+  }
+
+  .go-preset--bizb-marketplace .go-highlight {
+    font-size: clamp(1.45rem, 2.8vw, 2.6rem);
+  }
+
+  .go-preset--bizb-marketplace .go-hero-media {
+    max-height: 50vh;
+  }
+
+  .go-preset--bizb-marketplace .go-items article {
+    padding: 7px 9px;
+  }
+}
+
+@media (max-width: 720px) and (orientation: portrait) {
+  .go-preset--bizb-marketplace {
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+  }
+
+  .go-preset--bizb-marketplace .go-header {
+    width: calc(100% - 20px);
+    min-height: 50px;
+    padding: 4px 0;
+  }
+
+  .go-preset--bizb-marketplace .go-header::before {
+    width: 30px;
+    height: 36px;
+    flex-basis: 30px;
+  }
+
+  .go-preset--bizb-marketplace .go-header strong {
+    display: block;
+    max-width: 46vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .55rem;
+  }
+
+  .go-preset--bizb-marketplace .go-header > span:last-child {
+    font-size: .62rem;
+    padding: 6px 8px;
+  }
+
+  .go-preset--bizb-marketplace .go-hero {
+    position: relative;
+    width: calc(100% - 16px);
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin: 0 auto;
+    padding: clamp(14px, 2.5vh, 22px);
+    border-radius: 18px;
+    color: #fff;
+    background:
+      linear-gradient(180deg, rgb(0 0 0 / .18) 0%, rgb(0 0 0 / .48) 48%, rgb(0 0 0 / .82) 100%),
+      url("https://bizb.store/Desktop-images/BizB-SellerWebBanner.jpg") center / cover no-repeat;
+  }
+
+  .go-preset--bizb-marketplace .go-hero > div:first-child {
+    align-self: end;
+    position: relative;
+    z-index: 1;
+  }
+
+  .go-preset--bizb-marketplace .go-kicker {
+    background: #fdc114;
+    color: #231f20;
+    font-size: .58rem;
+    padding: 5px 8px;
+  }
+
+  .go-preset--bizb-marketplace .go-hero h1 {
+    color: #fff;
+    margin: 8px 0 6px;
+    max-width: 94%;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: clamp(2.15rem, 11vw, 3.25rem);
+    line-height: .88;
+    text-shadow: 0 2px 20px rgb(0 0 0 / .3);
+  }
+
+  .go-preset--bizb-marketplace .go-highlight {
+    color: #fff;
+    background: linear-gradient(transparent 64%, #fdc114 64%);
+    font-size: clamp(1.2rem, 6.2vw, 1.75rem);
+    line-height: 1.05;
+  }
+
+  .go-preset--bizb-marketplace .go-hero p {
+    max-width: 96%;
+    margin-top: 7px;
+    color: #fff;
+    opacity: .92;
+    font-size: clamp(.72rem, 3.2vw, .86rem);
+    line-height: 1.35;
+  }
+
+  .go-preset--bizb-marketplace .go-hero-media {
+    display: none;
+  }
+
+  .go-preset--bizb-marketplace .go-items {
+    width: calc(100% - 16px);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+    padding: 6px 0;
+  }
+
+  .go-preset--bizb-marketplace .go-items article {
+    min-height: 42px;
+    padding: 6px 5px;
+    place-content: center;
+    text-align: center;
+  }
+
+  .go-preset--bizb-marketplace .go-items b {
+    font-size: clamp(.58rem, 2.5vw, .7rem);
+    line-height: 1.12;
+  }
+
+  .go-preset--bizb-marketplace .go-items span {
+    display: none;
+  }
+
+  .go-preset--bizb-marketplace .go-cta {
+    min-height: 58px;
+    padding: 7px 10px calc(7px + env(safe-area-inset-bottom));
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .go-preset--bizb-marketplace .go-cta > h2 {
+    max-width: 52%;
+    font-size: clamp(.78rem, 3.4vw, .95rem);
+    line-height: 1.15;
+  }
+
+  .go-preset--bizb-marketplace .go-cta a {
+    padding: 9px 14px;
+    font-size: .78rem;
+  }
+}
+
+@media (max-width: 900px) and (orientation: landscape), (max-height: 560px) {
+  .go-preset--bizb-marketplace {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .go-preset--bizb-marketplace .go-header {
+    width: calc(100% - 20px);
+    min-height: 42px;
+    padding: 2px 0;
+  }
+
+  .go-preset--bizb-marketplace .go-header::before {
+    width: 26px;
+    height: 31px;
+    flex-basis: 26px;
+  }
+
+  .go-preset--bizb-marketplace .go-header strong {
+    display: none;
+  }
+
+  .go-preset--bizb-marketplace .go-hero {
+    width: calc(100% - 20px);
+    grid-template-columns: minmax(0, .9fr) minmax(240px, 1.1fr);
+    gap: 14px;
+    padding: 5px 0;
+  }
+
+  .go-preset--bizb-marketplace .go-hero h1 {
+    margin: 5px 0 4px;
+    font-size: clamp(1.9rem, 5.2vw, 3.2rem);
+  }
+
+  .go-preset--bizb-marketplace .go-highlight {
+    font-size: clamp(1.15rem, 3vw, 1.75rem);
+  }
+
+  .go-preset--bizb-marketplace .go-hero p {
+    margin-top: 5px;
+    font-size: .7rem;
+    line-height: 1.28;
+  }
+
+  .go-preset--bizb-marketplace .go-hero-media {
+    display: grid;
+    height: 100%;
+    max-height: none;
+    border-radius: 12px;
+  }
+
+  .go-preset--bizb-marketplace .go-items {
+    display: none;
+  }
+
+  .go-preset--bizb-marketplace .go-cta {
+    min-height: 50px;
+    padding-top: 5px;
+    padding-bottom: max(5px, env(safe-area-inset-bottom));
+  }
+
+  .go-preset--bizb-marketplace .go-cta > h2 {
+    font-size: .82rem;
+  }
+
+  .go-preset--bizb-marketplace .go-cta a {
+    padding: 8px 13px;
+    font-size: .74rem;
+  }
+}
