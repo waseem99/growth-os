@@ -17,12 +17,12 @@ function secureEqual(a: string, b: string) {
   return timingSafeEqual(left, right) && a.length > 0 && b.length > 0;
 }
 
-export function hasConversionSecretConfig(env: NodeJS.ProcessEnv) {
+export function hasConversionSecretConfig(env: Readonly<Record<string, string | undefined>>) {
   return Boolean(env.CONVERSION_INGEST_SECRET) ||
     Object.entries(env).some(([key, value]) => ENV_KEY.test(key) && Boolean(value));
 }
 
-export function earlyConversionTokenAccepted(token: string, env: NodeJS.ProcessEnv) {
+export function earlyConversionTokenAccepted(token: string, env: Readonly<Record<string, string | undefined>>) {
   if (!token) return false;
   const allowed = [
     env.CONVERSION_INGEST_SECRET,
@@ -31,7 +31,7 @@ export function earlyConversionTokenAccepted(token: string, env: NodeJS.ProcessE
   return allowed.some((secret) => secureEqual(token, secret));
 }
 
-export function conversionTokenMatchesBrand(token: string, brandId: string, env: NodeJS.ProcessEnv) {
+export function conversionTokenMatchesBrand(token: string, brandId: string, env: Readonly<Record<string, string | undefined>>) {
   if (!token || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(brandId)) {
     return false;
   }
