@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { analyticsEvents, getDatabase } from "@growth-os/db";
-import { analyticsEventInputSchema } from "@growth-os/tracking";
+import { analyticsEventInputSchema, CONVERSION_EVENT_NAMES } from "@growth-os/tracking";
 import { verifyTrackingContext } from "../../../lib/tracking-context";
 import { checkRateLimit, clientAddress, correlationId, logEvent, rateLimitHeaders, reportError } from "../../../lib/operability";
 
@@ -30,6 +30,12 @@ export async function POST(request: Request) {
   const parsed = analyticsEventInputSchema.safeParse(payload);
   if (!parsed.success) return NextResponse.json({ error: "INVALID_EVENT", issues: parsed.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })) }, { status: 400, headers });
 
+  // Public browser collection may never submit a success event; those require the
+  // authenticated backend-to-backend conversion endpoint.
+  if (CONVERSION_EVENT_NAMES.includes(parsed.data.eventName as typeof CONVERSION_EVENT_NAMES[number])) {
+    return NextResponse.json({ error: "SUCCESS_REQUIRES_SERVER_CONFIRMATION" }, { status: 403, headers });
+  }
+
   const context = await verifyTrackingContext(parsed.data);
   if (!context) return NextResponse.json({ error: "INVALID_CONTEXT" }, { status: 400, headers });
 
@@ -53,7 +59,8 @@ export async function POST(request: Request) {
       campaignName: parsed.data.campaignName ?? null,
       term: parsed.data.term ?? null,
       content: parsed.data.content ?? null,
-      properties: parsed.data.properties
+      properties: { ...parsed.data.properties, variationId: context.variationId,
+        packageId: context.packageId, packageCode: context.packageCode }
     }).onConflictDoNothing({ target: analyticsEvents.eventId }).returning({ id: analyticsEvents.id });
     logEvent("info", "analytics_event_accepted", { correlationId: requestId, eventName: parsed.data.eventName, duplicate: !inserted, pageId: context.pageId });
     return NextResponse.json({ accepted: true, duplicate: !inserted }, { status: inserted ? 201 : 200, headers });

@@ -61,7 +61,9 @@ export async function POST(request: Request) {
       value: parsed.data.value == null ? null : String(parsed.data.value),
       currency: parsed.data.currency ?? null,
       attribution: parsed.data.attribution,
-      properties: { ...parsed.data.properties, versionId: context.versionId }
+      properties: { ...parsed.data.properties, versionId: context.versionId,
+        variationId: context.variationId, packageId: context.packageId,
+        packageCode: context.packageCode }
     }).onConflictDoNothing({ target: conversions.idempotencyKey }).returning({ id: conversions.id });
     logEvent("info", "conversion_accepted", { correlationId: requestId, eventName: parsed.data.eventName, duplicate: !inserted, pageId: context.pageId });
     return NextResponse.json({ accepted: true, duplicate: !inserted }, { status: inserted ? 201 : 200, headers });

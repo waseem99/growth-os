@@ -58,6 +58,7 @@ async function getRouteSnapshot(params: RouteProps["params"], searchParams: Rout
     experimentId: experiment?.experimentId ?? null,
     variantId: experiment?.variantId ?? null,
     variationId: overlay.variation?.id ?? null,
+    variationVersionId: overlay.variation?.versionId ?? null,
     packageId: overlay.packageId,
     packageCode: overlay.packageCode,
     checkoutUrl: approvedCheckoutDestination(page.defaults, overlay.packageId, overlay.packageCode),
@@ -116,6 +117,6 @@ export default async function PublishedPage({ params, searchParams }: RouteProps
     {structuredData ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} /> : null}
     <PageRenderer document={parsed.data} theme={page.theme as BrandRenderTheme} offer={snapshot.offer} checkoutUrl={snapshot.checkoutUrl} renderMedia={renderPublicMedia(assetMap)} />
     <MarketingPixels brandId={page.brandId} source={snapshot.source} pixels={pixels} />
-    <GrowthTracker context={{ brandId: page.brandId, campaignId: snapshot.campaignId, pageId: page.pageId, versionId: snapshot.versionId, variantId: snapshot.variantId, experimentId: snapshot.experimentId, variationId: snapshot.variationId, packageId: snapshot.packageId, packageCode: snapshot.packageCode, sourceOverride: snapshot.source, testTraffic: snapshot.testTraffic, defaultUtm: page.campaignUtmDefaults }} />
+    <GrowthTracker context={{ brandId: page.brandId, campaignId: snapshot.campaignId, pageId: page.pageId, versionId: snapshot.versionId, variantId: snapshot.variantId, experimentId: snapshot.experimentId, variationId: snapshot.variationId, variationVersionId: snapshot.variationVersionId, checkoutUrl: snapshot.checkoutUrl, packageId: snapshot.packageId, packageCode: snapshot.packageCode, sourceOverride: snapshot.source, testTraffic: snapshot.testTraffic, defaultUtm: page.campaignUtmDefaults }} />
   </>;
 }

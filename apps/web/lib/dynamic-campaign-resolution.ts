@@ -7,6 +7,7 @@ import type { OfferSnapshot } from "@growth-os/page-engine";
 
 export type PublishedVariation = {
   id: string;
+  versionId: string;
   bannerAssetId: string | null;
   copyOverrides: Record<string, unknown>;
   campaignId: string | null;
@@ -33,6 +34,7 @@ export async function resolvePublishedCampaignOverlay(input: {
     const [variation, selectedPackage] = await Promise.all([
       input.variationKey ? db.select({
         id: landingVariations.id,
+        versionId: landingVariationVersions.id,
         bannerAssetId: landingVariationVersions.bannerAssetId,
         copyOverrides: landingVariationVersions.copyOverrides,
         campaignId: landingVariations.campaignId
@@ -64,7 +66,7 @@ export async function resolvePublishedCampaignOverlay(input: {
     return {
       validPackage: !input.packageCode || Boolean(selectedPackage),
       variation: variation ? {
-        id: variation.id, campaignId: variation.campaignId,
+        id: variation.id, versionId: variation.versionId, campaignId: variation.campaignId,
         bannerAssetId: variation.bannerAssetId,
         copyOverrides: variation.copyOverrides
       } : null,

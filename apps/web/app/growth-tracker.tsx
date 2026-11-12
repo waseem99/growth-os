@@ -19,6 +19,8 @@ type TrackingContext = {
   variantId?: string | null;
   experimentId?: string | null;
   variationId?: string | null;
+  variationVersionId?: string | null;
+  checkoutUrl?: string | null;
   packageId?: string | null;
   packageCode?: string | null;
   sourceOverride?: string | null;
@@ -88,6 +90,7 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
       experimentId: context.experimentId ?? null,
       testTraffic: context.testTraffic === true,
       variationId: context.variationId ?? null,
+      variationVersionId: context.variationVersionId ?? null,
       packageId: context.packageId ?? null,
       packageCode: context.packageCode ?? null
     };
@@ -112,12 +115,17 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
       properties: { ...properties, ...experimentProperties, firstTouch: attribution.firstTouch, lastTouch: attribution.lastTouch }
     });
 
+    // Do not leak campaign/session identifiers to arbitrary external destinations.
+    // Only the administrator-approved product checkout may receive this context.
+    const approvedCheckout = context.checkoutUrl ? new URL(context.checkoutUrl) : null;
     for (const anchor of document.querySelectorAll<HTMLAnchorElement>("a[href]")) {
       const raw = anchor.getAttribute("href");
       if (!raw || raw.startsWith("#") || raw.startsWith("mailto:") || raw.startsWith("tel:") || raw.startsWith("javascript:")) continue;
       try {
         const url = new URL(raw, window.location.href);
         if (!/^https?:$/.test(url.protocol)) continue;
+        if (!approvedCheckout || url.origin !== approvedCheckout.origin ||
+          url.pathname !== approvedCheckout.pathname) continue;
         if (utm.source && !url.searchParams.has("utm_source")) url.searchParams.set("utm_source", utm.source);
         if (utm.medium && !url.searchParams.has("utm_medium")) url.searchParams.set("utm_medium", utm.medium);
         if (utm.campaignName && !url.searchParams.has("utm_campaign")) url.searchParams.set("utm_campaign", utm.campaignName);
@@ -126,6 +134,7 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
         if (utm.creativeId && !url.searchParams.has("creative_id")) url.searchParams.set("creative_id", utm.creativeId);
         if (context.experimentId) url.searchParams.set("growthos_experiment_id", context.experimentId);
         if (context.variationId) url.searchParams.set("growthos_variation_id", context.variationId);
+        if (context.variationVersionId) url.searchParams.set("growthos_variation_version_id", context.variationVersionId);
         if (context.packageId) url.searchParams.set("growthos_package_id", context.packageId);
         if (context.packageCode) url.searchParams.set("growthos_package_code", context.packageCode);
         if (context.variantId) url.searchParams.set("growthos_variant_id", context.variantId);
@@ -198,7 +207,7 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
       document.removeEventListener("ended", video, true);
       window.removeEventListener("growthos:event", custom);
     };
-  }, [context.brandId, context.campaignId, context.defaultUtm, context.experimentId, context.pageId, context.testTraffic, context.variantId, context.versionId, context.variationId, context.packageId, context.packageCode, context.sourceOverride]);
+  }, [context.brandId, context.campaignId, context.defaultUtm, context.experimentId, context.pageId, context.testTraffic, context.variantId, context.versionId, context.variationId, context.variationVersionId, context.checkoutUrl, context.packageId, context.packageCode, context.sourceOverride]);
 
   return null;
 }

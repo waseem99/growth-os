@@ -152,3 +152,78 @@ test("conflicting or duplicated campaign source parameters are rejected", async 
   const duplicate = await page.goto(`${skillup}?package=1&package=2&parameter=ranchers`);
   expect(duplicate?.status()).toBe(404);
 });
+
+test("V2 accepts authenticated variation/package conversion context, with idempotency", async ({ request }) => {
+  const secret = process.env.CONVERSION_INGEST_SECRET;
+  expect(secret).toBeTruthy();
+  const properties = {
+    testTraffic: true,
+    variationId: "00000000-0000-4000-8000-000000000025",
+    variationVersionId: "00000000-0000-4000-8000-000000000026",
+    packageId: "00000000-0000-4000-8000-000000000024",
+    packageCode: "1"
+  };
+  const occurredAt = new Date().toISOString();
+  const analytics = {
+    eventId: "v2-variation-attribution-event-001",
+    eventName: "landing_view",
+    occurredAt,
+    ...ids,
+    variantId: null,
+    sessionId: "v2-variation-session-001",
+    anonymousId: "v2-variation-anon-001",
+    source: "meta",
+    medium: "paid_social",
+    properties
+  };
+  const acceptedEvent = await request.post("http://skillup.localhost:3000/api/events", { data: analytics });
+  expect([200, 201]).toContain(acceptedEvent.status());
+  expect(await acceptedEvent.json()).toMatchObject({ accepted: true });
+
+  const success = {
+    idempotencyKey: "v2-conversion-context-0001",
+    eventName: "subscription_started",
+    occurredAt,
+    ...ids,
+    variantId: null,
+    sessionId: analytics.sessionId,
+    value: 566,
+    currency: "PKR",
+    attribution: {
+      firstTouch: { source: "meta", medium: "paid_social", campaign: "ranchers", capturedAt: occurredAt },
+      lastTouch: { source: "meta", medium: "paid_social", campaign: "ranchers", capturedAt: occurredAt }
+    },
+    properties
+  };
+  const headers = { authorization: `Bearer ${secret}` };
+  const one = await request.post("http://skillup.localhost:3000/api/conversions", { data: success, headers });
+  expect([200, 201]).toContain(one.status());
+  expect(await one.json()).toMatchObject({ accepted: true });
+  const duplicate = await request.post("http://skillup.localhost:3000/api/conversions", { data: success, headers });
+  expect(duplicate.status()).toBe(200);
+  expect(await duplicate.json()).toMatchObject({ accepted: true, duplicate: true });
+
+  // A foreign product or fake package must never attribute revenue to SkillUp.
+  const spoofed = await request.post("http://skillup.localhost:3000/api/conversions", {
+    data: {
+      ...success, idempotencyKey: "v2-conversion-invalid-package-001",
+      properties: { ...properties, packageId: "00000000-0000-4000-8000-000000000150" }
+    }, headers
+  });
+  expect(spoofed.status()).toBe(400);
+  expect(await spoofed.json()).toMatchObject({ error: "INVALID_CONTEXT" });
+
+  const unrelatedBrand = await request.post("http://skillup.localhost:3000/api/conversions", {
+    data: {
+      ...success, idempotencyKey: "v2-conversion-cross-brand-001",
+      brandId: "00000000-0000-4000-8000-000000000110"
+    }, headers
+  });
+  expect(unrelatedBrand.status()).toBe(400);
+
+  const publicSuccess = await request.post("http://skillup.localhost:3000/api/events", {
+    data: { ...analytics, eventId: "v2-untrusted-success-event-001", eventName: "purchase" }
+  });
+  expect(publicSuccess.status()).toBe(403);
+  expect(await publicSuccess.json()).toMatchObject({ error: "SUCCESS_REQUIRES_SERVER_CONFIRMATION" });
+});
