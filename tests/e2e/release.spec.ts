@@ -126,3 +126,29 @@ test("event and downstream conversion ingestion preserve campaign context and id
   expect(duplicateConversion.status()).toBe(200);
   expect(await duplicateConversion.json()).toMatchObject({ accepted: true, duplicate: true });
 });
+
+test("V2 client URL selects the Ranchers banner configuration and approved SkillUp package", async ({ page }) => {
+  const response = await page.goto(`${skillup}?utm=M&package=1&parameter=ranchers`);
+  expect(response?.status()).toBe(200);
+  await expect(page.getByRole("heading", { level: 1 }).first()).toContainText("Ranchers acquisition campaign");
+  await expect(page.getByText(/PKR 566/).first()).toBeVisible();
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "http://skillup.localhost/ai-games");
+});
+
+test("unknown banner code uses the default approved creative", async ({ page }) => {
+  const response = await page.goto(`${skillup}?utm=T&parameter=unknown-campaign`);
+  expect(response?.status()).toBe(200);
+  await expect(page.getByRole("heading", { level: 1 }).first()).toContainText("Learn AI skills through games");
+});
+
+test("an unknown or cross-product package must never display another product's price", async ({ page }) => {
+  const response = await page.goto(`${jalwa}?package=1&parameter=ranchers`);
+  expect(response?.status()).toBe(404);
+});
+
+test("conflicting or duplicated campaign source parameters are rejected", async ({ page }) => {
+  const first = await page.goto(`${skillup}?utm=M&utm_source=tiktok&package=1&parameter=ranchers`);
+  expect(first?.status()).toBe(404);
+  const duplicate = await page.goto(`${skillup}?package=1&package=2&parameter=ranchers`);
+  expect(duplicate?.status()).toBe(404);
+});
