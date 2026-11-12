@@ -21,7 +21,7 @@ export function NewVariationForm({ pages, creatives, campaigns }: {
 
   return <section className="settings-card" style={{ marginTop: 24 }}>
     <h2>New campaign variation</h2>
-    <p>Select a product landing page first. Only that product's campaigns and banners can be used.</p>
+    <p>Select a product landing page first. Only that product’s campaigns and banners can be used.</p>
     <form action={createLandingVariation}>
       <div className="asset-upload-grid">
         <label>Product landing page
@@ -37,7 +37,7 @@ export function NewVariationForm({ pages, creatives, campaigns }: {
         </label>
         <label>Campaign (optional)
           <select key={pageId + "-campaign"} name="campaignId" defaultValue="" disabled={!brandId}>
-            <option value="">Use page's default campaign</option>
+            <option value="">Use page’s default campaign</option>
             {availableCampaigns.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.name}</option>)}
           </select>
         </label>
