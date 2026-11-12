@@ -99,6 +99,7 @@ export default async function VariationsPage() {
               <p>{item.status} · Latest draft v{latest?.versionNumber ?? "—"} · Public v{current?.versionNumber ?? "—"}</p>
               <p>Published banner: {nameOf(current?.bannerAssetId ?? null)}</p>
             </div>
+            <p><Link href={`/preview/variations/${item.id}`} target="_blank" rel="noreferrer">Preview latest draft (private)</Link></p>
             {published && baseUrl ? <VariationLinkBuilder baseUrl={baseUrl} parameter={item.key} packages={approvedPackages.map((p) => ({ code: p.code }))} /> : null}
             {!baseUrl && <p>Assign a verified product hostname in <Link href="/brands">Products &amp; Domains</Link> to generate a public campaign link.</p>}
             {canManage && latest ? <>
