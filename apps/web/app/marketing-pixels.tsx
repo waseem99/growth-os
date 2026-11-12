@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import type { PublicMarketingPixels } from "../lib/public-marketing-pixels";
 
 type Provider = "meta" | "tiktok";
@@ -86,26 +86,35 @@ export function MarketingPixels({ brandId, source, pixels }: {
   const provider: Provider | null = source === "meta" ? "meta" : source === "tiktok" ? "tiktok" : null;
   const pixelId = provider === "meta" ? pixels.meta : provider === "tiktok" ? pixels.tiktok : null;
   const key = `growthos.marketing-consent.v1.${brandId}`;
-  const [preference, setPreference] = useState<Preference>("unknown");
-  const [loaded, setLoaded] = useState(false);
+  const preference = useSyncExternalStore(
+    (onChange) => {
+      window.addEventListener("storage", onChange);
+      window.addEventListener("growthos:marketing-consent", onChange);
+      return () => {
+        window.removeEventListener("storage", onChange);
+        window.removeEventListener("growthos:marketing-consent", onChange);
+      };
+    },
+    () => {
+      try {
+        const saved = localStorage.getItem(key);
+        return saved === "accepted" || saved === "rejected" ? saved : "unknown";
+      } catch { return "rejected"; }
+    },
+    () => "unknown"
+  ) as Preference;
 
   useEffect(() => {
-    const stored = localStorage.getItem(key);
-    setPreference(stored === "accepted" || stored === "rejected" ? stored : "unknown");
-    setLoaded(true);
-  }, [key]);
-
-  useEffect(() => {
-    if (!loaded || preference !== "accepted" || !provider || !pixelId) return;
+    if (preference !== "accepted" || !provider || !pixelId) return;
     if (provider === "meta") loadMetaPixel(pixelId);
     if (provider === "tiktok") loadTikTokPixel(pixelId);
-  }, [loaded, preference, provider, pixelId]);
+  }, [preference, provider, pixelId]);
 
-  if (!provider || !pixelId || !loaded) return null;
+  if (!provider || !pixelId) return null;
   const choose = (value: "accepted" | "rejected") => {
-    localStorage.setItem(key, value);
+    try { localStorage.setItem(key, value); } catch { return; }
     if (value === "rejected") revokePixels();
-    setPreference(value);
+    window.dispatchEvent(new Event("growthos:marketing-consent"));
   };
 
   return <aside aria-label="Marketing measurement preferences" style={{
