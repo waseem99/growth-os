@@ -1,4 +1,3 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { and, eq, isNull, or } from "drizzle-orm";
 import {
@@ -7,23 +6,25 @@ import {
 import { conversionInputSchema } from "@growth-os/tracking";
 import { verifyTrackingContext } from "../../../lib/tracking-context";
 import { deliveryPayload, deliveryProvider } from "../../../lib/conversion-delivery";
+import { conversionTokenMatchesBrand, earlyConversionTokenAccepted, hasConversionSecretConfig } from "../../../lib/conversion-auth";
 import { checkRateLimit, clientAddress, correlationId, logEvent, rateLimitHeaders, reportError } from "../../../lib/operability";
 
 export const runtime = "nodejs";
 
+function bearerToken(request: Request) {
+  const raw = request.headers.get("authorization") ?? "";
+  const match = /^Bearer\s+([^\s]+)$/i.exec(raw);
+  return match?.[1] ?? "";
+}
+
 function authorized(request: Request) {
-  const secret = process.env.CONVERSION_INGEST_SECRET;
-  const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  if (!secret || !supplied) return false;
-  const expected = Buffer.from(secret);
-  const actual = Buffer.from(supplied);
-  return expected.length === actual.length && timingSafeEqual(expected, actual);
+  return earlyConversionTokenAccepted(bearerToken(request), process.env);
 }
 
 export async function POST(request: Request) {
   const requestId = correlationId(request);
   const baseHeaders = { "x-request-id": requestId };
-  if (!process.env.CONVERSION_INGEST_SECRET) return NextResponse.json({ error: "INGEST_NOT_CONFIGURED" }, { status: 503, headers: baseHeaders });
+  if (!hasConversionSecretConfig(process.env)) return NextResponse.json({ error: "INGEST_NOT_CONFIGURED" }, { status: 503, headers: baseHeaders });
   if (!authorized(request)) {
     logEvent("warn", "conversion_auth_rejected", { correlationId: requestId });
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401, headers: baseHeaders });
@@ -47,6 +48,13 @@ export async function POST(request: Request) {
   }
   const parsed = conversionInputSchema.safeParse(payload);
   if (!parsed.success) return NextResponse.json({ error: "INVALID_CONVERSION", issues: parsed.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })) }, { status: 400, headers });
+
+  // A product-scoped credential overrides the legacy shared token. This check
+  // happens before any callback is attributed to a product or stored.
+  if (!conversionTokenMatchesBrand(bearerToken(request), parsed.data.brandId, process.env)) {
+    logEvent("warn", "conversion_product_auth_rejected", { correlationId: requestId });
+    return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401, headers });
+  }
 
   const context = await verifyTrackingContext(parsed.data);
   if (!context) return NextResponse.json({ error: "INVALID_CONTEXT" }, { status: 400, headers });

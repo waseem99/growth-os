@@ -52,3 +52,62 @@ The requested client URL is `/landing?utm=M&package=1&parameter=ranchers`. Each 
 - Backend-confirmed conversions count once, map to the correct provider event and reconcile with product records.
 
 **Status:** PR implementation in progress, production unchanged; **not yet staging-approved or production-ready** until all external integrations and UAT are complete.
+
+
+## November 12 V2 backend hardening and delivery queue
+
+The V2 branch now includes additional safeguards:
+- `apps/web/lib/tracking-context.ts` validates variation, variation version, package ID/code and effective campaign against the canonical product/page. A variation-owned campaign is now accepted only for its own page; unrelated product references are rejected.
+- The public `/api/events` endpoint rejects all canonical success events. Only the authenticated `/api/conversions` product server callback records signup, subscription and purchase success.
+- Outbound session/campaign IDs are appended to **approved product checkout links only**, never every external link.
+- `/tracking-rules` configures product/optional-package mappings to provider-specific Meta `Subscribe`/`Purchase` and TikTok `Subscribe`/`CompletePayment` events. Each source has a separate rule. It stores **no tokens**.
+- Migration `0007_conversion_rules` adds product-scoped rules and triggers prohibiting cross-product offer and banner relationships; migration `0008_conversion_deliveries` adds the idempotent delivery ledger.
+- An authenticated product callback with `properties.marketingConsent === true`, `properties.testTraffic !== true`, enabled provider integration and matching enabled event rule creates a `pending` provider delivery intent in the **same database transaction** as the canonical conversion. Duplicates cannot enqueue again. No consent, disabled rule or QA traffic creates no provider delivery intent.
+- `/tracking-rules/deliveries` distinguishes `pending` from `delivered` provider events. **At this stage no Meta/TikTok server API transport is active.** A pending record is not a verified provider receipt.
+- The downstream product must affirm consent from its own trusted session/policy record; it must **not** merely echo an unsigned URL value.
+
+### Recommended per-product server callback secrets
+
+The existing `CONVERSION_INGEST_SECRET` remains as a legacy fallback until each product is migrated. To isolate products, configure a separate secret in staging and later production:
+
+`GROWTHOS_CONVERSION_SECRET_<BRAND_UUID_WITHOUT_HYPHENS_UPPERCASE>`
+
+For example, a brand UUID `00000000-0000-4000-8000-000000000010` corresponds to `GROWTHOS_CONVERSION_SECRET_00000000000040008000000000000010`. When configured, only that product-specific secret is valid for its `brandId` and the shared legacy secret is rejected for that brand. Configure secrets **in the protected hosting environment**, never in repository files, URLs or client JavaScript.
+
+### Backend callback example (for developer testing only)
+
+```json
+{
+  "idempotencyKey": "stable-backend-transaction-id",
+  "eventName": "subscription_started",
+  "occurredAt": "2026-11-12T12:00:00.000Z",
+  "brandId": "<approved-product-uuid>",
+  "campaignId": "<approved-product-campaign-uuid>",
+  "pageId": "<published-landing-page-uuid>",
+  "versionId": "<published-page-version-uuid>",
+  "sessionId": "<growthos-attributed-session-id>",
+  "value": 566,
+  "currency": "PKR",
+  "attribution": {
+    "firstTouch": { "source": "meta", "capturedAt": "2026-11-12T11:55:00.000Z" },
+    "lastTouch": { "source": "meta", "capturedAt": "2026-11-12T11:55:00.000Z" }
+  },
+  "properties": {
+    "variationId": "<approved-variation-uuid>",
+    "variationVersionId": "<approved-variation-version-uuid>",
+    "packageId": "<approved-product-package-uuid>",
+    "packageCode": "1",
+    "marketingConsent": true,
+    "testTraffic": false
+  }
+}
+```
+
+All UUID values shown above are placeholders for a real backend integration, not a public browser request. The backend must obtain a verified product transaction and consent record before emitting this callback. For testing QA traffic, send `testTraffic:true`; those records should not create live provider delivery intents.
+
+### Remaining external completion gates
+
+1. Correct Vercel team access and a **separate blank staging database**. Do not use the existing Neon production main. See issue #52.
+2. Connect and UAT at least one actual product staging checkout backend and callback. A simulated CI conversion does not prove a real transaction.
+3. Configure Meta and TikTok provider credentials through approved secret management, implement/verify the actual provider transport worker, retries, provider receipts and event deduplication. Current database records are pending intents only. See issue #53.
+4. Run live browser/mobile UAT of brand creation, variation preview/publish, packages, event rules and rollback; capture tested URLs and a real screen-recording. Sign off staging before any production release.
