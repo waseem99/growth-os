@@ -45,7 +45,7 @@ export async function createLandingVariation(form: FormData) {
         const [campaign] = await tx.select({ id: campaigns.id }).from(campaigns).where(and(eq(campaigns.id, campaignId), eq(campaigns.brandId, page.brandId))).limit(1);
         if (!campaign) throw new Error("CROSS_PRODUCT_CAMPAIGN");
       }
-      await checkBanner(tx as typeof db, assetId, page.brandId);
+      await checkBanner(tx as unknown as typeof db, assetId, page.brandId);
       const [variation] = await tx.insert(landingVariations).values({
         pageId, brandId: page.brandId, campaignId, parameterKey: key, createdBy: actor.id, status: "draft"
       }).returning({ id: landingVariations.id });
@@ -79,7 +79,7 @@ export async function saveVariationDraft(form: FormData) {
         .from(landingVariationVersions).where(eq(landingVariationVersions.variationId, id))
         .orderBy(desc(landingVariationVersions.versionNumber)).limit(1);
       if (!latest || latest.version !== expected) throw new Error("VARIATION_EDIT_CONFLICT_RELOAD");
-      await checkBanner(tx as typeof db, assetId, variation.brandId);
+      await checkBanner(tx as unknown as typeof db, assetId, variation.brandId);
       version = expected + 1;
       await tx.insert(landingVariationVersions).values({
         variationId: id, versionNumber: version, bannerAssetId: assetId,
@@ -115,7 +115,7 @@ export async function publishLandingVariation(form: FormData) {
       }).from(landingVariationVersions).where(eq(landingVariationVersions.variationId, id))
         .orderBy(desc(landingVariationVersions.versionNumber)).limit(1);
       if (!latest || latest.version !== expected) throw new Error("VARIATION_PUBLISH_CONFLICT_RELOAD");
-      await checkBanner(tx as typeof db, latest.bannerAssetId, row.brandId);
+      await checkBanner(tx as unknown as typeof db, latest.bannerAssetId, row.brandId);
       publishedVersionId = latest.id;
       await tx.insert(landingVariationPublications).values({ variationId: id, versionId: latest.id, publishedBy: actor.id })
         .onConflictDoUpdate({ target: landingVariationPublications.variationId,
@@ -159,7 +159,7 @@ export async function rollbackLandingVariation(form: FormData) {
       const [version] = await tx.select({ id: landingVariationVersions.id, bannerAssetId: landingVariationVersions.bannerAssetId })
         .from(landingVariationVersions).where(and(eq(landingVariationVersions.variationId, id), eq(landingVariationVersions.id, targetVersion))).limit(1);
       if (!version) throw new Error("VARIATION_VERSION_NOT_FOUND");
-      await checkBanner(tx as typeof db, version.bannerAssetId, variation.brandId);
+      await checkBanner(tx as unknown as typeof db, version.bannerAssetId, variation.brandId);
       await tx.update(landingVariationPublications).set({ versionId: targetVersion, publishedAt: new Date(), publishedBy: actor.id })
         .where(eq(landingVariationPublications.variationId, id));
       await tx.update(landingVariations).set({ status: "active", updatedAt: new Date() }).where(eq(landingVariations.id, id));
