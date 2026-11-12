@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import {
   assets, brands, campaigns, domains, getDatabase, landingPages, landingVariations,
   landingVariationVersions, landingVariationPublications, pagePublications, productPackages
@@ -7,10 +7,11 @@ import {
 import { hasPermission } from "@/lib/authz";
 import { requireGrowthUser } from "@/lib/user-access";
 import {
-  createLandingVariation, saveVariationDraft, publishLandingVariation,
+  saveVariationDraft, publishLandingVariation,
   pauseLandingVariation, rollbackLandingVariation
 } from "./actions";
 import { VariationLinkBuilder } from "./variation-links";
+import { NewVariationForm } from "./new-variation-form";
 
 export default async function VariationsPage() {
   const user = await requireGrowthUser();
@@ -26,7 +27,7 @@ export default async function VariationsPage() {
       }).from(landingPages).innerJoin(brands, eq(brands.id, landingPages.brandId))
         .leftJoin(domains, eq(domains.id, landingPages.domainId))
         .leftJoin(pagePublications, eq(pagePublications.pageId, landingPages.id))
-        .where(eq(landingPages.status, "draft")).orderBy(brands.name),
+        .where(and(eq(landingPages.status, "draft"), eq(brands.status, "active"))).orderBy(brands.name),
       db.select({ id: assets.id, brandId: assets.brandId, title: assets.title, type: assets.type })
         .from(assets).orderBy(desc(assets.createdAt)),
       db.select({
@@ -61,27 +62,12 @@ export default async function VariationsPage() {
         <h1>Change the banner, not the website.</h1>
         <p>Create banner parameters per product/page; preview the source creative and publish an immutable variation version. The default page, tracking and other products remain independent.</p>
       </section>
-      {canManage ? <section className="settings-card" style={{ marginTop: 24 }}>
-        <h2>New variation</h2>
-        <form action={createLandingVariation}>
-          <div className="asset-upload-grid">
-            <label>Default landing page<select name="pageId" required defaultValue=""><option value="" disabled>Select page</option>
-              {pages.map((page) => <option key={page.id} value={page.id}>{page.brandName} · /{page.slug} — {page.pageName}</option>)}
-            </select></label>
-            <label>Banner parameter<input name="parameterKey" required maxLength={80} placeholder="ranchers" pattern="[A-Za-z0-9-]+" /></label>
-            <label>Campaign (optional)<select name="campaignId" defaultValue=""><option value="">Page default campaign</option>
-              {campaignRows.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.name}</option>)}
-            </select></label>
-            <label>Banner asset<select name="bannerAssetId" defaultValue=""><option value="">Keep default hero</option>
-              {visuals.map((asset) => <option key={asset.id} value={asset.id}>{asset.title ?? asset.id} ({asset.type})</option>)}
-            </select></label>
-            <label>Headline override (optional)<input name="headline" maxLength={180} /></label>
-            <label>Subheadline override (optional)<input name="subheadline" maxLength={500} /></label>
-          </div>
-          <p>Upload the creative from <Link href="/assets">Ad Creative</Link> first. The selected banner must belong to the same product as the chosen page.</p>
-          <button className="primary-button" type="submit">Save draft variation</button>
-        </form>
-      </section> : null}
+      {canManage ? <NewVariationForm
+        pages={pages.map((page) => ({ id: page.id, brandId: page.brandId, brandName: page.brandName,
+          pageName: page.pageName, slug: page.slug }))}
+        creatives={visuals.map((asset) => ({ id: asset.id, brandId: asset.brandId, title: asset.title, type: asset.type }))}
+        campaigns={campaignRows}
+      /> : null}
 
       <div className="table-list" style={{ marginTop: 24 }}>
         {variations.length === 0 ? <div className="empty-state">No campaign variations. Add a creative above to begin.</div> : null}

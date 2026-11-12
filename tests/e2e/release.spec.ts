@@ -316,6 +316,27 @@ test("V2 consent-confirmed backend callback creates exactly one pending, unsent 
       WHERE c.idempotency_key = 'growthos-v2-no-consent-outbox-test-0001'`;
     expect(rows[0]?.count).toBe(0);
   } finally { await noConsentDb.client.end(); }
+
+  // Consent alone is not enough: an authenticated conversion with no matching
+  // metadata must still be recorded but must never create an undeliverable job.
+  const noMatchingKey = "growthos-v2-no-matching-outbox-test-0001";
+  const missingMatching = await request.post("http://skillup.localhost:3000/api/conversions", {
+    data: {
+      ...consented, idempotencyKey: noMatchingKey,
+      properties: { variationId, variationVersionId, packageId, packageCode: "1",
+        marketingConsent: true, testTraffic: false }
+    }, headers
+  });
+  expect([200, 201]).toContain(missingMatching.status());
+  const noMatchDb = getDatabase();
+  try {
+    const [row] = await noMatchDb.client<{ confirmations: number; queued: number }[]>`
+      SELECT count(c.id)::int AS confirmations, count(d.id)::int AS queued
+      FROM conversions c
+      LEFT JOIN conversion_provider_deliveries d ON d.conversion_id = c.id
+      WHERE c.idempotency_key = ${noMatchingKey}`;
+    expect(row).toMatchObject({ confirmations: 1, queued: 0 });
+  } finally { await noMatchDb.client.end(); }
 });
 
 test("provider delivery endpoint is not publicly callable", async ({ request }) => {

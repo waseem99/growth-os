@@ -22,6 +22,9 @@ GrowthOS is a multi-product landing-page, campaign, attribution and reporting po
   - Meta Conversions API `https://graph.facebook.com/v25.0/<pixel-id>/events`.
   - TikTok Events API 2.0 `https://business-api.tiktok.com/open_api/v1.3/event/track/`.
 - A Meta result is considered delivered only after an HTTP 2xx response with `events_received >= 1`. TikTok requires HTTP 2xx and response `code === 0`.
+- Provider HTTP requests require the officially specified static API URLs. **HTTP redirects are rejected** so bearer credentials cannot follow a redirect to another origin.
+- An authenticated product conversion with affirmative marketing consent **but missing or malformed provider matching** is still recorded as a confirmed canonical conversion. It does **not** create a pending provider delivery job. This prevents undeliverable queue pollution. A later callback with the same transaction ID is idempotent and does not retroactively enqueue an event; ensure the product sends valid consent and matching evidence with its first success callback.
+- Provider-transport tests use an injected local mock HTTP function. They verify accepted and rejected provider acknowledgments, 401/403 permanent failures, 429/5xx retryability, exception handling, strict endpoint validation and redirect rejection; no real provider request is made during GitHub CI.
 - Retryable failures get bounded 60s/5m/15m/1h backoff, a total of five attempts, and then terminal `failed`; permanent input/auth rejection becomes `suspended`. Failed or suspended rows are **not** provider receipts.
 - On delivery success, the queue erases its `matching` field to minimize retention of pseudonymous data. Do not log tokens, matching information or raw provider responses.
 - Do **not** enable an automated dispatcher schedule until real staging provider Test Events has been checked, including duplicate rejection and a fail/retry scenario.

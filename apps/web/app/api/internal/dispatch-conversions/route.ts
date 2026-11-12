@@ -1,7 +1,8 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@growth-os/db";
-import { buildProviderTransport, providerAccepted, type DeliveryIntent } from "../../../../lib/provider-transport";
+import { buildProviderTransport, type DeliveryIntent } from "../../../../lib/provider-transport";
+import { sendProviderRequest } from "../../../../lib/provider-dispatch";
 import type { DeliveryProvider } from "../../../../lib/conversion-delivery";
 
 export const runtime = "nodejs";
@@ -115,22 +116,10 @@ export async function POST(request: Request) {
               errorCode = "INVALID_OR_EXPIRED_EVENT_OR_MATCHING";
               terminal = true;
             } else {
-              const response = await fetch(req.endpoint, {
-                method: "POST",
-                headers: req.headers,
-                body: JSON.stringify(req.body),
-                cache: "no-store",
-                signal: AbortSignal.timeout(8000)
-              });
-              const result: unknown = await response.json().catch(() => null);
-              ok = providerAccepted(row.provider, response.status, result);
-              if (!ok) {
-                errorCode = response.status === 401 || response.status === 403
-                  ? "PROVIDER_AUTH_REJECTED"
-                  : `PROVIDER_RESPONSE_${response.status}`;
-                terminal = response.status === 401 || response.status === 403 ||
-                  (response.status >= 400 && response.status < 500 && response.status !== 429);
-              }
+              const result = await sendProviderRequest(row.provider, req);
+              ok = result.accepted;
+              errorCode = result.errorCode;
+              terminal = result.terminal;
             }
           }
         }

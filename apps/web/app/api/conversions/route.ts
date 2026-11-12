@@ -69,6 +69,9 @@ export async function POST(request: Request) {
       marketingConsent: parsed.data.properties.marketingConsent,
       testTraffic: parsed.data.properties.testTraffic
     });
+    // A consent flag alone is not enough for a sendable provider event.
+    // Preserve the confirmed conversion, but do not enqueue a doomed
+    // provider delivery without validated matching signals.
     const matching = provider ? sanitizeProviderMatch(parsed.data.properties.providerMatching) : null;
     const safeProperties = Object.fromEntries(
       Object.entries(parsed.data.properties).filter(([key]) => key !== "providerMatching")
@@ -94,7 +97,7 @@ export async function POST(request: Request) {
       }).onConflictDoNothing({ target: conversions.idempotencyKey }).returning({ id: conversions.id });
       if (!saved) return false;
 
-      if (provider) {
+      if (provider && matching) {
         const eligiblePackages = context.packageId
           ? or(isNull(conversionEventRules.packageId), eq(conversionEventRules.packageId, context.packageId))
           : isNull(conversionEventRules.packageId);
