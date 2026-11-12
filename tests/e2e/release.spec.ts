@@ -266,7 +266,13 @@ test("V2 consent-confirmed backend callback creates exactly one pending, unsent 
     },
     properties: {
       variationId, variationVersionId, packageId, packageCode: "1",
-      marketingConsent: true, testTraffic: false
+      marketingConsent: true, testTraffic: false,
+      providerMatching: {
+        externalIdSha256: "a".repeat(64),
+        clientUserAgent: "Mozilla/5.0 GrowOS E2E Testing Browser",
+        fbp: "fb.1.123.456",
+        email: "not-a-queue-field@example.com"
+      }
     }
   };
   const headers = { authorization: `Bearer ${secret}` };
@@ -286,6 +292,13 @@ test("V2 consent-confirmed backend callback creates exactly one pending, unsent 
       WHERE c.idempotency_key = ${consented.idempotencyKey}`;
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ provider: "meta", provider_event: "Subscribe", status: "pending", attempt_count: 0, total: 1 });
+    const [matching] = await db.client<{ payload: Record<string, unknown>; properties: Record<string, unknown> }[]>`
+      SELECT d.payload, c.properties
+      FROM conversion_provider_deliveries d JOIN conversions c ON c.id = d.conversion_id
+      WHERE c.idempotency_key = ${consented.idempotencyKey}`;
+    expect((matching.payload.matching as Record<string, unknown>).externalIdSha256).toBe("a".repeat(64));
+    expect(JSON.stringify(matching.payload)).not.toContain("not-a-queue-field@example.com");
+    expect(matching.properties.providerMatching).toBeUndefined();
   } finally { await db.client.end(); }
 
   const noConsent = await request.post("http://skillup.localhost:3000/api/conversions", {
@@ -303,4 +316,12 @@ test("V2 consent-confirmed backend callback creates exactly one pending, unsent 
       WHERE c.idempotency_key = 'growthos-v2-no-consent-outbox-test-0001'`;
     expect(rows[0]?.count).toBe(0);
   } finally { await noConsentDb.client.end(); }
+});
+
+test("provider delivery endpoint is not publicly callable", async ({ request }) => {
+  const unauthorized = await request.post("http://skillup.localhost:3000/api/internal/dispatch-conversions", {
+    data: {}
+  });
+  expect(unauthorized.status()).toBe(401);
+  expect(await unauthorized.json()).toMatchObject({ error: "UNAUTHORIZED" });
 });

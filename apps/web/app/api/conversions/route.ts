@@ -5,7 +5,7 @@ import {
 } from "@growth-os/db";
 import { conversionInputSchema } from "@growth-os/tracking";
 import { verifyTrackingContext } from "../../../lib/tracking-context";
-import { deliveryPayload, deliveryProvider } from "../../../lib/conversion-delivery";
+import { deliveryPayload, deliveryProvider, sanitizeProviderMatch } from "../../../lib/conversion-delivery";
 import { conversionTokenMatchesBrand, earlyConversionTokenAccepted, hasConversionSecretConfig } from "../../../lib/conversion-auth";
 import { checkRateLimit, clientAddress, correlationId, logEvent, rateLimitHeaders, reportError } from "../../../lib/operability";
 
@@ -69,6 +69,10 @@ export async function POST(request: Request) {
       marketingConsent: parsed.data.properties.marketingConsent,
       testTraffic: parsed.data.properties.testTraffic
     });
+    const matching = provider ? sanitizeProviderMatch(parsed.data.properties.providerMatching) : null;
+    const safeProperties = Object.fromEntries(
+      Object.entries(parsed.data.properties).filter(([key]) => key !== "providerMatching")
+    );
     const inserted = await db.transaction(async (tx) => {
       const [saved] = await tx.insert(conversions).values({
         idempotencyKey: parsed.data.idempotencyKey,
@@ -83,7 +87,7 @@ export async function POST(request: Request) {
         currency: parsed.data.currency ?? null,
         attribution: parsed.data.attribution,
         properties: {
-          ...parsed.data.properties, versionId: context.versionId,
+          ...safeProperties, versionId: context.versionId,
           variationId: context.variationId, packageId: context.packageId,
           packageCode: context.packageCode
         }
@@ -122,7 +126,8 @@ export async function POST(request: Request) {
             currency: parsed.data.currency ?? null,
             pageId: context.pageId,
             variationId: context.variationId,
-            packageCode: context.packageCode
+            packageCode: context.packageCode,
+            matching
           });
           await tx.insert(conversionProviderDeliveries).values({
             conversionId: saved.id,
