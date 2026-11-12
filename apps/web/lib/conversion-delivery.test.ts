@@ -39,7 +39,7 @@ describe("trusted provider conversion delivery", () => {
   });
   it("rejects raw identifiers and malformed matching context", () => {
     expect(sanitizeProviderMatch({ externalIdSha256: "customer-001", clientUserAgent: "Mozilla/5.0" })).toBeNull();
-    expect(sanitizeProviderMatch({ externalIdSha256: "a".repeat(64), clientUserAgent: "bad\\nagent" })).toBeNull();
+    expect(sanitizeProviderMatch({ externalIdSha256: "a".repeat(64), clientUserAgent: "bad" + String.fromCharCode(10) + "agent" })).toBeNull();
     expect(sanitizeProviderMatch(undefined)).toBeNull();
   });
 });
