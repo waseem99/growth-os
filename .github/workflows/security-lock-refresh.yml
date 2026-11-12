@@ -1,0 +1,32 @@
+name: Regenerate GrowthOS security lockfile (branch-only)
+on:
+  push:
+    branches: [security/growthos-next-zod-20261112]
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.repository == 'waseem99/growth-os' && github.ref == 'refs/heads/security/growthos-next-zod-20261112'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Resolve pinned security versions
+        run: npm install --no-audit --no-fund
+      - name: Verify the production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Commit updated lockfile to this isolated security branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "growthos-security-ci"
+          git config user.email "growthos-security-ci@users.noreply.github.com"
+          git add package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(security): refresh audited npm dependency lockfile"
+            git push origin HEAD:security/growthos-next-zod-20261112
+          fi
