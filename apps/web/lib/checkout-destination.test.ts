@@ -21,4 +21,4 @@ describe("approved per-product checkout handoff", () => {
     expect(new URL(result!).hostname).toBe("checkout.jalwa.example");
     expect(new URL(result!).searchParams.get("growthos_package_code")).toBe("../different-product");
   });
-}
+});

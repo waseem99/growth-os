@@ -7,6 +7,8 @@ import { resolveExperimentVariant } from "../../lib/experiment-resolution";
 import { resolvePageAssets } from "../../lib/page-assets";
 import { canonicalFor } from "../../lib/public-seo";
 import { GrowthTracker } from "../growth-tracker";
+import { MarketingPixels } from "../marketing-pixels";
+import { resolvePublicMarketingPixels } from "../../lib/public-marketing-pixels";
 import { parseCampaignParameters } from "../../lib/campaign-parameters";
 import { resolvePublishedCampaignOverlay } from "../../lib/dynamic-campaign-resolution";
 import { applyPublishedVariation } from "../../lib/campaign-variation";
@@ -108,9 +110,12 @@ export default async function PublishedPage({ params, searchParams }: RouteProps
   if (!parsed.success || !seo.success) notFound();
   const assetMap = await resolvePageAssets(parsed.data, [seo.data.socialAssetId ?? page.defaultSocialAssetId]);
   const structuredData = Object.keys(seo.data.structuredData).length ? seo.data.structuredData : null;
+  const pixels = snapshot.source === "meta" || snapshot.source === "tiktok"
+    ? await resolvePublicMarketingPixels(page.brandId) : { meta: null, tiktok: null };
   return <>
     {structuredData ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} /> : null}
     <PageRenderer document={parsed.data} theme={page.theme as BrandRenderTheme} offer={snapshot.offer} checkoutUrl={snapshot.checkoutUrl} renderMedia={renderPublicMedia(assetMap)} />
+    <MarketingPixels brandId={page.brandId} source={snapshot.source} pixels={pixels} />
     <GrowthTracker context={{ brandId: page.brandId, campaignId: snapshot.campaignId, pageId: page.pageId, versionId: snapshot.versionId, variantId: snapshot.variantId, experimentId: snapshot.experimentId, variationId: snapshot.variationId, packageId: snapshot.packageId, packageCode: snapshot.packageCode, sourceOverride: snapshot.source, testTraffic: snapshot.testTraffic, defaultUtm: page.campaignUtmDefaults }} />
   </>;
 }
