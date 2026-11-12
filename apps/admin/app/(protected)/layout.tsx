@@ -28,6 +28,7 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
             <summary>More</summary>
             <div className="nav-more-menu">
               {canViewAnalytics && <Link href="/experiments">Experiments</Link>}
+              {canViewAnalytics && <Link href="/analytics/variations">Variation Results</Link>}
               {canUseAi && <Link href="/ai">AI Assistant</Link>}
               {isAdmin && <Link href="/brands">Products & Domains</Link>}
               {canManageIntegrations && <Link href="/integrations">Integrations</Link>}

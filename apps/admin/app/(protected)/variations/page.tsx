@@ -32,7 +32,7 @@ export default async function VariationsPage() {
       db.select({
         id: landingVariations.id, brandId: landingVariations.brandId,
         pageId: landingVariations.pageId, key: landingVariations.parameterKey,
-        status: landingVariations.status, pageName: landingPages.name,
+        status: landingVariations.status, campaignId: landingVariations.campaignId, pageName: landingPages.name,
         brandName: brands.name, publishedVersionId: landingVariationPublications.versionId
       }).from(landingVariations).innerJoin(landingPages, eq(landingPages.id, landingVariations.pageId))
         .innerJoin(brands, eq(brands.id, landingVariations.brandId))
@@ -100,7 +100,7 @@ export default async function VariationsPage() {
               <p>Published banner: {nameOf(current?.bannerAssetId ?? null)}</p>
             </div>
             <p><Link href={`/preview/variations/${item.id}`} target="_blank" rel="noreferrer">Preview latest draft (private)</Link></p>
-            {published && baseUrl ? <VariationLinkBuilder baseUrl={baseUrl} parameter={item.key} packages={approvedPackages.map((p) => ({ code: p.code }))} /> : null}
+            {published && baseUrl ? <VariationLinkBuilder baseUrl={baseUrl} parameter={item.key} campaignName={campaignRows.find((c) => c.id === item.campaignId)?.name ?? ""} packages={approvedPackages.map((p) => ({ code: p.code }))} /> : null}
             {!baseUrl && <p>Assign a verified product hostname in <Link href="/brands">Products &amp; Domains</Link> to generate a public campaign link.</p>}
             {canManage && latest ? <>
               <details>

@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 
-export function VariationLinkBuilder({ baseUrl, parameter, packages }: {
+export function VariationLinkBuilder({ baseUrl, parameter, campaignName, packages }: {
   baseUrl: string;
   parameter: string;
+  campaignName: string;
   packages: Array<{ code: string }>;
 }) {
   const [source, setSource] = useState("meta");
@@ -14,8 +15,10 @@ export function VariationLinkBuilder({ baseUrl, parameter, packages }: {
     url.searchParams.set("parameter", parameter);
     if (packageCode) url.searchParams.set("package", packageCode);
     url.searchParams.set("utm_source", source);
+    if (campaignName) url.searchParams.set("utm_campaign", campaignName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"));
+    url.searchParams.set("utm_medium", source === "organic" ? "organic" : "paid_social");
     return url.toString();
-  }, [baseUrl, parameter, packageCode, source]);
+  }, [baseUrl, parameter, packageCode, source, campaignName]);
   return <div>
     <strong>Campaign link generator</strong>
     <div className="asset-upload-grid">
@@ -29,6 +32,7 @@ export function VariationLinkBuilder({ baseUrl, parameter, packages }: {
       </select></label>
     </div>
     <label>Generated URL<input value={link} readOnly onFocus={(event) => event.target.select()} /></label>
+    <button type="button" onClick={() => { void navigator.clipboard.writeText(link); }}>Copy URL</button>
     <a href={link} target="_blank" rel="noreferrer">Open published variation</a>
   </div>;
 }
