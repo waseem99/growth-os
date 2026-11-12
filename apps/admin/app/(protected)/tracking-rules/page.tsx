@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { eq, desc } from "drizzle-orm";
 import { brands, conversionEventRules, getDatabase, productPackages } from "@growth-os/db";
 import { CONVERSION_PROVIDER_EVENTS } from "@growth-os/tracking";
@@ -26,7 +27,8 @@ export default async function TrackingRulesPage() {
       <section className="section-heading">
         <p className="eyebrow">Conversion event rules</p>
         <h1>Map each product and package to a tracking event.</h1>
-        <p>Approved standard events for Meta and TikTok, independently scoped by product and package. These rules are configuration only: successful events require the product backend callback, server-to-provider delivery and consent verification before any live claim.</p>
+        <p>Approved standard events for Meta and TikTok, independently scoped by product and package. Successful provider receipts are separate from backend-confirmed conversions.</p>
+        <Link href="/tracking-rules/deliveries">View provider delivery diagnostics</Link>
       </section>
       <section className="settings-card" style={{ marginTop: 24 }}>
         <h2>New or updated event mapping</h2>

@@ -29,7 +29,8 @@ const requiredTables = [
   "landing_variations",
   "landing_variation_versions",
   "landing_variation_publications",
-  "conversion_event_rules"
+  "conversion_event_rules",
+  "conversion_provider_deliveries"
 ];
 const requiredMigrations = [
   "0001_initial",
@@ -38,7 +39,8 @@ const requiredMigrations = [
   "0004_experiment_integrity",
   "0005_operability",
   "0006_dynamic_campaigns",
-  "0007_conversion_rules"
+  "0007_conversion_rules",
+  "0008_conversion_deliveries"
 ];
 
 try {
@@ -124,6 +126,14 @@ try {
   const ruleIndexes = await sql<{ indexname: string }[]>`
     SELECT indexname FROM pg_indexes WHERE indexname = 'conversion_event_rules_scope_uidx'`;
   if (ruleIndexes.length !== 1) throw new Error("Scoped event rule uniqueness missing");
+
+  const outboxIndexes = await sql<{ indexname: string }[]>`
+    SELECT indexname FROM pg_indexes
+    WHERE indexname IN (
+      'conversion_provider_deliveries_once_uidx',
+      'conversion_provider_deliveries_event_uidx'
+    )`;
+  if (outboxIndexes.length !== 2) throw new Error("Conversion delivery idempotency indexes missing");
 
   console.log(`Production schema verified: ${requiredTables.length} tables and ${requiredMigrations.length} migrations`);
 } finally {

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { getDatabase } from "@growth-os/db";
 
 const skillup = "http://skillup.localhost:3000/ai-games";
 const jalwa = "http://jalwa.localhost:3000/watch";
@@ -226,4 +227,80 @@ test("V2 accepts authenticated variation/package conversion context, with idempo
   });
   expect(publicSuccess.status()).toBe(403);
   expect(await publicSuccess.json()).toMatchObject({ error: "SUCCESS_REQUIRES_SERVER_CONFIRMATION" });
+});
+
+test("V2 consent-confirmed backend callback creates exactly one pending, unsent provider delivery", async ({ request }) => {
+  // This test manipulates only disposable CI fixtures. Never point it at the live DB.
+  test.skip(!process.env.DATABASE_URL?.includes("localhost:5432/growthos"), "Disposable CI database required");
+  const secret = process.env.CONVERSION_INGEST_SECRET;
+  expect(secret).toBeTruthy();
+  const { client } = getDatabase();
+  const brandId = "00000000-0000-4000-8000-000000000010";
+  const packageId = "00000000-0000-4000-8000-000000000024";
+  const variationId = "00000000-0000-4000-8000-000000000025";
+  const variationVersionId = "00000000-0000-4000-8000-000000000026";
+  const occurredAt = new Date().toISOString();
+  try {
+    await client`INSERT INTO integrations (brand_id, provider, status, public_config)
+      VALUES (${brandId}, 'meta', 'enabled', '{"pixelId":"123456789012"}'::jsonb)
+      ON CONFLICT (brand_id, provider) DO UPDATE SET status='enabled'`;
+    await client`INSERT INTO conversion_event_rules
+      (brand_id, package_id, provider, canonical_event, provider_event, status)
+      VALUES (${brandId}, ${packageId}, 'meta', 'subscription_started', 'Subscribe', 'enabled')
+      ON CONFLICT (brand_id, package_id, provider, canonical_event)
+      DO UPDATE SET status='enabled', provider_event='Subscribe'`;
+  } finally { await client.end(); }
+
+  const consented = {
+    idempotencyKey: "growthos-v2-consent-outbox-test-0001",
+    eventName: "subscription_started",
+    occurredAt,
+    brandId, campaignId: "00000000-0000-4000-8000-000000000030",
+    pageId: "00000000-0000-4000-8000-000000000050",
+    versionId: "00000000-0000-4000-8000-000000000051",
+    variantId: null, sessionId: "growthos-v2-outbox-session-01",
+    value: 566, currency: "PKR",
+    attribution: {
+      firstTouch: { source: "meta", medium: "paid_social", campaign: "ranchers", capturedAt: occurredAt },
+      lastTouch: { source: "meta", medium: "paid_social", campaign: "ranchers", capturedAt: occurredAt }
+    },
+    properties: {
+      variationId, variationVersionId, packageId, packageCode: "1",
+      marketingConsent: true, testTraffic: false
+    }
+  };
+  const headers = { authorization: `Bearer ${secret}` };
+  const first = await request.post("http://skillup.localhost:3000/api/conversions", { data: consented, headers });
+  expect([200, 201]).toContain(first.status());
+  const duplicate = await request.post("http://skillup.localhost:3000/api/conversions", { data: consented, headers });
+  expect(duplicate.status()).toBe(200);
+  expect(await duplicate.json()).toMatchObject({ accepted: true, duplicate: true });
+
+  const db = getDatabase();
+  try {
+    const result = await db.client<{ provider: string; provider_event: string; status: string; attempt_count: number; total: number }[]>`
+      SELECT d.provider, d.provider_event, d.status, d.attempt_count,
+             count(*) over()::int AS total
+      FROM conversion_provider_deliveries d
+      JOIN conversions c ON c.id = d.conversion_id
+      WHERE c.idempotency_key = ${consented.idempotencyKey}`;
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ provider: "meta", provider_event: "Subscribe", status: "pending", attempt_count: 0, total: 1 });
+  } finally { await db.client.end(); }
+
+  const noConsent = await request.post("http://skillup.localhost:3000/api/conversions", {
+    data: {
+      ...consented, idempotencyKey: "growthos-v2-no-consent-outbox-test-0001",
+      properties: { ...consented.properties, marketingConsent: false }
+    }, headers
+  });
+  expect([200, 201]).toContain(noConsent.status());
+  const noConsentDb = getDatabase();
+  try {
+    const rows = await noConsentDb.client<{ count: number }[]>`
+      SELECT count(d.id)::int AS count FROM conversion_provider_deliveries d
+      JOIN conversions c ON c.id = d.conversion_id
+      WHERE c.idempotency_key = 'growthos-v2-no-consent-outbox-test-0001'`;
+    expect(rows[0]?.count).toBe(0);
+  } finally { await noConsentDb.client.end(); }
 });

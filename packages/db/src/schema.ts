@@ -495,3 +495,33 @@ export const conversionEventRules = pgTable(
     index("conversion_event_rules_brand_status_idx").on(table.brandId, table.status)
   ]
 );
+
+/**
+ * At-least-once provider delivery ledger. Outbox creation is transactional
+ * with canonical conversions; no provider API credentials are persisted.
+ */
+export const conversionProviderDeliveries = pgTable(
+  "conversion_provider_deliveries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    conversionId: uuid("conversion_id").notNull().references(() => conversions.id, { onDelete: "cascade" }),
+    brandId: uuid("brand_id").notNull().references(() => brands.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    providerEvent: text("provider_event").notNull(),
+    providerEventId: text("provider_event_id").notNull(),
+    status: text("status").notNull().default("pending"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull().defaultNow(),
+    lastError: text("last_error"),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    payload: jsonb("payload").$type<JsonObject>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("conversion_provider_deliveries_once_uidx").on(table.conversionId, table.provider),
+    uniqueIndex("conversion_provider_deliveries_event_uidx").on(table.provider, table.providerEventId),
+    index("conversion_provider_deliveries_due_idx").on(table.status, table.nextAttemptAt),
+    index("conversion_provider_deliveries_brand_idx").on(table.brandId, table.createdAt)
+  ]
+);
