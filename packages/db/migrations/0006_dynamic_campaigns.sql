@@ -2,6 +2,9 @@
 -- No existing pages, prices, assets, publication pointers or analytics are modified.
 -- Marketing UI/renderer activation is deliberately deferred until fully tested.
 
+CREATE UNIQUE INDEX IF NOT EXISTS campaigns_id_brand_uidx
+  ON campaigns (id, brand_id);
+
 CREATE UNIQUE INDEX IF NOT EXISTS landing_pages_id_brand_uidx
   ON landing_pages (id, brand_id);
 
@@ -22,13 +25,16 @@ CREATE TABLE landing_variations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   brand_id uuid NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
   page_id uuid NOT NULL,
+  campaign_id uuid,
   parameter_key text NOT NULL CHECK (parameter_key ~ '^[a-z0-9]([a-z0-9-]{0,78}[a-z0-9])?$'),
   status text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'paused', 'archived')),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   created_by uuid REFERENCES app_users(id) ON DELETE SET NULL,
   CONSTRAINT landing_variations_page_brand_fk FOREIGN KEY (page_id, brand_id)
-    REFERENCES landing_pages(id, brand_id) ON DELETE CASCADE
+    REFERENCES landing_pages(id, brand_id) ON DELETE CASCADE,
+  CONSTRAINT landing_variations_campaign_brand_fk FOREIGN KEY (campaign_id, brand_id)
+    REFERENCES campaigns(id, brand_id) ON DELETE SET NULL (campaign_id)
 );
 CREATE UNIQUE INDEX landing_variations_page_parameter_uidx ON landing_variations (page_id, parameter_key);
 CREATE INDEX landing_variations_brand_status_idx ON landing_variations (brand_id, status);

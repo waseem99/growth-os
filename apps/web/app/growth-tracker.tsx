@@ -18,6 +18,10 @@ type TrackingContext = {
   versionId: string;
   variantId?: string | null;
   experimentId?: string | null;
+  variationId?: string | null;
+  packageId?: string | null;
+  packageCode?: string | null;
+  sourceOverride?: string | null;
   testTraffic?: boolean;
   defaultUtm?: Record<string, unknown> | null;
 };
@@ -68,7 +72,7 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
     const query = new URLSearchParams(window.location.search);
     const defaults = context.defaultUtm;
     const touch = attributionTouchFromQuery({
-      utm_source: query.get("utm_source") ?? stringDefault(defaults, "source"),
+      utm_source: context.sourceOverride ?? query.get("utm_source") ?? stringDefault(defaults, "source"),
       utm_medium: query.get("utm_medium") ?? stringDefault(defaults, "medium"),
       utm_campaign: query.get("utm_campaign") ?? stringDefault(defaults, "campaign"),
       utm_term: query.get("utm_term") ?? stringDefault(defaults, "term"),
@@ -82,7 +86,10 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
     const utm = eventUtmFields(attribution);
     const experimentProperties = {
       experimentId: context.experimentId ?? null,
-      testTraffic: context.testTraffic === true
+      testTraffic: context.testTraffic === true,
+      variationId: context.variationId ?? null,
+      packageId: context.packageId ?? null,
+      packageCode: context.packageCode ?? null
     };
 
     const emit = (eventName: AnalyticsEventInput["eventName"], properties: Record<string, unknown> = {}) => send({
@@ -118,6 +125,9 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
         if (utm.content && !url.searchParams.has("utm_content")) url.searchParams.set("utm_content", utm.content);
         if (utm.creativeId && !url.searchParams.has("creative_id")) url.searchParams.set("creative_id", utm.creativeId);
         if (context.experimentId) url.searchParams.set("growthos_experiment_id", context.experimentId);
+        if (context.variationId) url.searchParams.set("growthos_variation_id", context.variationId);
+        if (context.packageId) url.searchParams.set("growthos_package_id", context.packageId);
+        if (context.packageCode) url.searchParams.set("growthos_package_code", context.packageCode);
         if (context.variantId) url.searchParams.set("growthos_variant_id", context.variantId);
         url.searchParams.set("growthos_page_id", context.pageId);
         url.searchParams.set("growthos_version_id", context.versionId);
@@ -188,7 +198,7 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
       document.removeEventListener("ended", video, true);
       window.removeEventListener("growthos:event", custom);
     };
-  }, [context.brandId, context.campaignId, context.defaultUtm, context.experimentId, context.pageId, context.testTraffic, context.variantId, context.versionId]);
+  }, [context.brandId, context.campaignId, context.defaultUtm, context.experimentId, context.pageId, context.testTraffic, context.variantId, context.versionId, context.variationId, context.packageId, context.packageCode, context.sourceOverride]);
 
   return null;
 }

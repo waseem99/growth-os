@@ -19,6 +19,8 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
         <nav aria-label="Admin navigation">
           <Link href="/">Overview</Link>
           {canManageCampaigns && <Link href="/campaigns">Campaigns</Link>}
+          {canManageCampaigns && <Link href="/packages">Packages</Link>}
+          <Link href="/variations">Variations</Link>
           <Link href="/assets">Ad Creative</Link>
           <Link href="/pages">Landing Pages</Link>
           {canViewAnalytics && <Link href="/analytics">Results</Link>}

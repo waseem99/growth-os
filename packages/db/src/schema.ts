@@ -411,6 +411,7 @@ export const landingVariations = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     brandId: uuid("brand_id").notNull().references(() => brands.id, { onDelete: "cascade" }),
     pageId: uuid("page_id").notNull(),
+    campaignId: uuid("campaign_id"),
     parameterKey: text("parameter_key").notNull(),
     status: text("status").notNull().default("draft"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -422,6 +423,11 @@ export const landingVariations = pgTable(
       columns: [table.pageId, table.brandId],
       foreignColumns: [landingPages.id, landingPages.brandId],
       name: "landing_variations_page_brand_fk"
+    }),
+    foreignKey({
+      columns: [table.campaignId, table.brandId],
+      foreignColumns: [campaigns.id, campaigns.brandId],
+      name: "landing_variations_campaign_brand_fk"
     }),
     uniqueIndex("landing_variations_page_parameter_uidx").on(table.pageId, table.parameterKey),
     index("landing_variations_brand_status_idx").on(table.brandId, table.status)

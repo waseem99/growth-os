@@ -65,7 +65,7 @@ function Block({
     case "comparison":
       return <section className="go-section"><h2>{"title" in block ? block.title : ""}</h2>{"intro" in block && <p>{block.intro}</p>}<div className="go-card-grid">{block.items.map((x) => <article key={x.id}><Media id={"iconAssetId" in x ? x.iconAssetId : null} alt="" resolveAsset={resolveAsset} renderMedia={renderMedia} /><h3>{x.title}</h3><p>{x.text}</p></article>)}</div></section>;
     case "pricing":
-      return <section className="go-section go-pricing"><h2>{block.title}</h2><p>{block.body}</p><strong>{offer?.recurringAmount ? `${money(offer.recurringAmount, offer.currency)} / ${offer.billingInterval ?? "period"}` : "Offer configured at publish time"}</strong><a href="#checkout">{block.ctaLabel}</a></section>;
+      return <section className="go-section go-pricing"><h2>{block.title}</h2><p>{block.body}</p><strong>{offer?.recurringAmount ? `${money(offer.recurringAmount, offer.currency)} / ${offer.billingInterval ?? "period"}` : offer?.initialAmount ? `${money(offer.initialAmount, offer.currency)} one-time` : "Offer configured at publish time"}</strong><a href="#checkout">{block.ctaLabel}</a></section>;
     case "stats":
       return <section className="go-stats">{block.items.map((x) => <div key={x.id}><b>{x.value}</b><span>{x.label}</span></div>)}</section>;
     case "gallery":
