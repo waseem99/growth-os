@@ -159,7 +159,7 @@ export async function POST(request: Request) {
         `;
         counts.suspended += 1;
       } else {
-        const retrySeconds = [60, 300, 900, 3600, 3600][Math.min(row.attempt_count - 1, 4)];
+        const retrySeconds = [60, 300, 900, 3600, 3600][Math.max(0, Math.min(row.attempt_count - 1, 4))] ?? 3600;
         await client`
           UPDATE conversion_provider_deliveries SET
             status = 'pending',
