@@ -28,7 +28,8 @@ const requiredTables = [
   "product_packages",
   "landing_variations",
   "landing_variation_versions",
-  "landing_variation_publications"
+  "landing_variation_publications",
+  "conversion_event_rules"
 ];
 const requiredMigrations = [
   "0001_initial",
@@ -36,7 +37,8 @@ const requiredMigrations = [
   "0003_tracking_context",
   "0004_experiment_integrity",
   "0005_operability",
-  "0006_dynamic_campaigns"
+  "0006_dynamic_campaigns",
+  "0007_conversion_rules"
 ];
 
 try {
@@ -103,6 +105,25 @@ try {
     WHERE table_name='landing_variations'
       AND constraint_name='landing_variations_page_brand_fk'`;
   if (brandOwnership.length !== 1) throw new Error("Variation/page brand ownership constraint is missing");
+
+  const rulesConstraints = await sql<{ constraint_name: string }[]>`
+    SELECT constraint_name
+    FROM information_schema.table_constraints
+    WHERE table_name = 'conversion_event_rules'
+      AND constraint_name = 'conversion_rules_package_brand_fk'`;
+  if (rulesConstraints.length !== 1) throw new Error("Conversion rule product ownership constraint missing");
+
+  const ownershipTriggers = await sql<{ tgname: string }[]>`
+    SELECT tgname FROM pg_trigger
+    WHERE NOT tgisinternal AND tgname IN (
+      'growthos_product_packages_offer_owner',
+      'growthos_variation_versions_asset_owner'
+    )`;
+  if (ownershipTriggers.length !== 2) throw new Error("V2 product ownership triggers missing");
+
+  const ruleIndexes = await sql<{ indexname: string }[]>`
+    SELECT indexname FROM pg_indexes WHERE indexname = 'conversion_event_rules_scope_uidx'`;
+  if (ruleIndexes.length !== 1) throw new Error("Scoped event rule uniqueness missing");
 
   console.log(`Production schema verified: ${requiredTables.length} tables and ${requiredMigrations.length} migrations`);
 } finally {

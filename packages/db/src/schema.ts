@@ -467,3 +467,31 @@ export const landingVariationPublications = pgTable(
     })
   ]
 );
+
+/** Versioned, product-scoped provider event mapping; no API credentials here. */
+export const conversionEventRules = pgTable(
+  "conversion_event_rules",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    brandId: uuid("brand_id").notNull().references(() => brands.id, { onDelete: "cascade" }),
+    packageId: uuid("package_id"),
+    provider: text("provider").notNull(),
+    canonicalEvent: text("canonical_event").notNull(),
+    providerEvent: text("provider_event").notNull(),
+    status: text("status").notNull().default("disabled"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" })
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.packageId, table.brandId],
+      foreignColumns: [productPackages.id, productPackages.brandId],
+      name: "conversion_rules_package_brand_fk"
+    }),
+    uniqueIndex("conversion_event_rules_scope_uidx").on(
+      table.brandId, table.packageId, table.provider, table.canonicalEvent
+    ),
+    index("conversion_event_rules_brand_status_idx").on(table.brandId, table.status)
+  ]
+);

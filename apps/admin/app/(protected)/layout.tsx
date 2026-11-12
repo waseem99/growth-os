@@ -32,6 +32,7 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
               {canUseAi && <Link href="/ai">AI Assistant</Link>}
               {isAdmin && <Link href="/brands">Products & Domains</Link>}
               {canManageIntegrations && <Link href="/integrations">Integrations</Link>}
+              {canManageIntegrations && <Link href="/tracking-rules">Conversion Rules</Link>}
               {isAdmin && <Link href="/users">Users</Link>}
               {isAdmin && <Link href="/audit">Audit Log</Link>}
             </div>
