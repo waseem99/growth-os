@@ -10,6 +10,7 @@ import { GrowthTracker } from "../growth-tracker";
 import { parseCampaignParameters } from "../../lib/campaign-parameters";
 import { resolvePublishedCampaignOverlay } from "../../lib/dynamic-campaign-resolution";
 import { applyPublishedVariation } from "../../lib/campaign-variation";
+import { approvedCheckoutDestination } from "../../lib/checkout-destination";
 import { renderPublicMedia } from "../public-media";
 
 export const revalidate = 60;
@@ -57,6 +58,7 @@ async function getRouteSnapshot(params: RouteProps["params"], searchParams: Rout
     variationId: overlay.variation?.id ?? null,
     packageId: overlay.packageId,
     packageCode: overlay.packageCode,
+    checkoutUrl: approvedCheckoutDestination(page.defaults, overlay.packageId, overlay.packageCode),
     source: selections.source,
     testTraffic: Boolean(testTraffic && experiment)
   };
@@ -108,7 +110,7 @@ export default async function PublishedPage({ params, searchParams }: RouteProps
   const structuredData = Object.keys(seo.data.structuredData).length ? seo.data.structuredData : null;
   return <>
     {structuredData ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} /> : null}
-    <PageRenderer document={parsed.data} theme={page.theme as BrandRenderTheme} offer={snapshot.offer} renderMedia={renderPublicMedia(assetMap)} />
+    <PageRenderer document={parsed.data} theme={page.theme as BrandRenderTheme} offer={snapshot.offer} checkoutUrl={snapshot.checkoutUrl} renderMedia={renderPublicMedia(assetMap)} />
     <GrowthTracker context={{ brandId: page.brandId, campaignId: snapshot.campaignId, pageId: page.pageId, versionId: snapshot.versionId, variantId: snapshot.variantId, experimentId: snapshot.experimentId, variationId: snapshot.variationId, packageId: snapshot.packageId, packageCode: snapshot.packageCode, sourceOverride: snapshot.source, testTraffic: snapshot.testTraffic, defaultUtm: page.campaignUtmDefaults }} />
   </>;
 }
