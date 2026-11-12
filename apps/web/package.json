@@ -16,7 +16,8 @@
     "@growth-os/tracking": "*",
     "next": "16.4.6",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "drizzle-orm": "0.45.2"
   },
   "devDependencies": {
     "@types/node": "26.4.0",
