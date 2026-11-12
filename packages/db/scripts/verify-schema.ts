@@ -24,14 +24,19 @@ const requiredTables = [
   "integrations",
   "audit_logs",
   "ai_jobs",
-  "rate_limit_buckets"
+  "rate_limit_buckets",
+  "product_packages",
+  "landing_variations",
+  "landing_variation_versions",
+  "landing_variation_publications"
 ];
 const requiredMigrations = [
   "0001_initial",
   "0002_page_draft_seo",
   "0003_tracking_context",
   "0004_experiment_integrity",
-  "0005_operability"
+  "0005_operability",
+  "0006_dynamic_campaigns"
 ];
 
 try {
@@ -84,6 +89,20 @@ try {
   for (const name of ["experiments_one_running_per_page_uidx", "variants_experiment_page_version_uidx", "variants_one_control_uidx"]) {
     if (!experimentIndexNames.has(name)) throw new Error(`Experiment integrity index ${name} is missing`);
   }
+
+  const variationOwnership = await sql<{ constraint_name: string }[]>`
+    SELECT constraint_name
+    FROM information_schema.table_constraints
+    WHERE table_name='landing_variation_publications'
+      AND constraint_name='landing_variation_publications_version_ownership_fk'`;
+  if (variationOwnership.length !== 1) throw new Error("Variation publication ownership constraint is missing");
+
+  const brandOwnership = await sql<{ constraint_name: string }[]>`
+    SELECT constraint_name
+    FROM information_schema.table_constraints
+    WHERE table_name='landing_variations'
+      AND constraint_name='landing_variations_page_brand_fk'`;
+  if (brandOwnership.length !== 1) throw new Error("Variation/page brand ownership constraint is missing");
 
   console.log(`Production schema verified: ${requiredTables.length} tables and ${requiredMigrations.length} migrations`);
 } finally {

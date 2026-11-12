@@ -1,6 +1,7 @@
 import {
   bigint,
   boolean,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -171,6 +172,7 @@ export const landingPages = pgTable(
   },
   (table) => [
     uniqueIndex("landing_pages_brand_slug_uidx").on(table.brandId, table.slug),
+    uniqueIndex("landing_pages_id_brand_uidx").on(table.id, table.brandId),
     index("landing_pages_campaign_idx").on(table.campaignId),
     index("landing_pages_domain_idx").on(table.domainId),
     index("landing_pages_updated_idx").on(table.updatedAt)
@@ -378,4 +380,84 @@ export const aiJobs = pgTable(
     completedAt: timestamp("completed_at", { withTimezone: true })
   },
   (table) => [index("ai_jobs_status_created_idx").on(table.status, table.createdAt)]
+);
+
+/**
+ * GrowthOS V2 campaign configuration foundation.
+ * Packages and variations are product-scoped and remain inactive until their
+ * admin publication and checkout validation workflows are implemented.
+ */
+export const productPackages = pgTable(
+  "product_packages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    brandId: uuid("brand_id").notNull().references(() => brands.id, { onDelete: "cascade" }),
+    packageCode: text("package_code").notNull(),
+    offerVersionId: uuid("offer_version_id").notNull().references(() => offerVersions.id, { onDelete: "restrict" }),
+    status: text("status").notNull().default("draft"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" })
+  },
+  (table) => [
+    uniqueIndex("product_packages_brand_code_uidx").on(table.brandId, table.packageCode),
+    index("product_packages_brand_status_idx").on(table.brandId, table.status)
+  ]
+);
+
+export const landingVariations = pgTable(
+  "landing_variations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    brandId: uuid("brand_id").notNull().references(() => brands.id, { onDelete: "cascade" }),
+    pageId: uuid("page_id").notNull(),
+    parameterKey: text("parameter_key").notNull(),
+    status: text("status").notNull().default("draft"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" })
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.pageId, table.brandId],
+      foreignColumns: [landingPages.id, landingPages.brandId],
+      name: "landing_variations_page_brand_fk"
+    }),
+    uniqueIndex("landing_variations_page_parameter_uidx").on(table.pageId, table.parameterKey),
+    index("landing_variations_brand_status_idx").on(table.brandId, table.status)
+  ]
+);
+
+export const landingVariationVersions = pgTable(
+  "landing_variation_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    variationId: uuid("variation_id").notNull().references(() => landingVariations.id, { onDelete: "cascade" }),
+    versionNumber: integer("version_number").notNull(),
+    bannerAssetId: uuid("banner_asset_id").references(() => assets.id, { onDelete: "restrict" }),
+    copyOverrides: jsonb("copy_overrides").$type<JsonObject>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" })
+  },
+  (table) => [
+    uniqueIndex("landing_variation_versions_number_uidx").on(table.variationId, table.versionNumber),
+    uniqueIndex("landing_variation_versions_ownership_uidx").on(table.variationId, table.id)
+  ]
+);
+
+export const landingVariationPublications = pgTable(
+  "landing_variation_publications",
+  {
+    variationId: uuid("variation_id").primaryKey().references(() => landingVariations.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id").notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+    publishedBy: uuid("published_by").references(() => users.id, { onDelete: "set null" })
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.variationId, table.versionId],
+      foreignColumns: [landingVariationVersions.variationId, landingVariationVersions.id],
+      name: "landing_variation_publications_version_ownership_fk"
+    })
+  ]
 );
