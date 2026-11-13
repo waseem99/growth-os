@@ -135,7 +135,9 @@ test.describe("GrowthOS Admin operator acceptance (disposable CI database only)"
 
       await page.goto(admin + "/variations");
       const variationRollback = page.locator("section.settings-card").filter({ hasText: parameter });
-      await variationRollback.locator('select[name="versionId"]').selectOption({ label: /Version 1/ });
+      const previousVersionId = await variationRollback.locator('select[name="versionId"] option').filter({ hasText: "Version 1" }).getAttribute("value");
+      expect(previousVersionId).toBeTruthy();
+      await variationRollback.locator('select[name="versionId"]').selectOption(previousVersionId!);
       await variationRollback.getByRole("button", { name: "Rollback to selected version" }).click();
       await expect(variationRollback).toContainText("active");
       await page.goto(campaignUrl);
