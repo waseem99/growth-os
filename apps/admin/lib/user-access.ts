@@ -14,7 +14,7 @@ export async function requireGrowthUser() {
 export async function requirePermission(permission: Permission) {
   const user = await requireGrowthUser();
   if (!hasPermission(user.role as GrowthRole, permission)) {
-    throw new Error("FORBIDDEN");
+    redirect("/access-denied");
   }
   return user;
 }
