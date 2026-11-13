@@ -204,6 +204,25 @@ test("V2 accepts authenticated variation/package conversion context, with idempo
   expect(duplicate.status()).toBe(200);
   expect(await duplicate.json()).toMatchObject({ accepted: true, duplicate: true });
 
+  // Checkout must not report PKR 990 against an approved PKR 566 campaign package.
+  const wrongCharge = await request.post("http://skillup.localhost:3000/api/conversions", {
+    data: {
+      ...success, idempotencyKey: "v2-conversion-price-mismatch-001",
+      value: 990, currency: "PKR"
+    }, headers
+  });
+  expect(wrongCharge.status()).toBe(400);
+  expect(await wrongCharge.json()).toMatchObject({ error: "PACKAGE_AMOUNT_MISMATCH" });
+
+  const wrongCurrency = await request.post("http://skillup.localhost:3000/api/conversions", {
+    data: {
+      ...success, idempotencyKey: "v2-conversion-currency-mismatch-001",
+      currency: "USD"
+    }, headers
+  });
+  expect(wrongCurrency.status()).toBe(400);
+  expect(await wrongCurrency.json()).toMatchObject({ error: "PACKAGE_AMOUNT_MISMATCH" });
+
   // A foreign product or fake package must never attribute revenue to SkillUp.
   const spoofed = await request.post("http://skillup.localhost:3000/api/conversions", {
     data: {
