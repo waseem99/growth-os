@@ -1,13 +1,31 @@
 # Non-release feature validation. The mandatory CI security audit remains unchanged.
-# See issue #50 for the pre-existing Next/Zod dependency audit blocker.
+# Include every V2 contract surface so a conversion/provider-only change
+# cannot silently skip the focused schema, ownership and API unit checks.
 name: GrowthOS V2 foundation checks
 
 on:
   pull_request:
     paths:
+      - "apps/admin/app/(protected)/analytics/variations/**"
+      - "apps/admin/app/(protected)/packages/**"
+      - "apps/admin/app/(protected)/tracking-rules/**"
+      - "apps/admin/app/(protected)/variations/**"
+      - "apps/admin/app/preview/variations/**"
+      - "apps/web/app/**"
+      - "apps/web/lib/campaign-*"
+      - "apps/web/lib/checkout-*"
+      - "apps/web/lib/conversion-*"
+      - "apps/web/lib/provider-*"
+      - "apps/web/lib/public-marketing-pixels.ts"
+      - "apps/web/lib/tracking-context.ts"
+      - "apps/web/lib/dynamic-campaign-resolution.ts"
       - "packages/db/**"
-      - "apps/web/lib/campaign-parameters*"
-      - "docs/growthos-v2-implementation.md"
+      - "packages/tracking/**"
+      - "packages/page-engine/src/variations.ts"
+      - "packages/page-engine/src/render.tsx"
+      - "tests/e2e/release.spec.ts"
+      - "docs/growthos-v2-*.md"
+      - "docs/provider-delivery-runbook.md"
       - ".github/workflows/v2-foundation-checks.yml"
 
 permissions:
