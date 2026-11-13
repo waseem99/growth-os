@@ -63,6 +63,10 @@ test.describe("GrowthOS Admin operator acceptance (disposable CI database only)"
       await expect(page.locator("body")).toContainText(campaignName);
       const [campaign] = await client<{ id: string }[]>`SELECT id::text FROM campaigns WHERE name = ${campaignName}`;
       expect(campaign?.id).toBeTruthy();
+      const campaignCard = page.locator("section.settings-card").filter({ hasText: campaignName });
+      await campaignCard.locator('select[name="status"]').selectOption("active");
+      await campaignCard.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(campaignCard.locator('select[name="status"]')).toHaveValue("active");
 
       // Package must begin as draft and only become publicly selectable when activated.
       await page.goto(admin + "/packages");
@@ -105,7 +109,8 @@ test.describe("GrowthOS Admin operator acceptance (disposable CI database only)"
       const variationForm = page.locator('form:has(input[name="parameterKey"])');
       await variationForm.locator('select[name="pageId"]').selectOption(pageId);
       await variationForm.locator('input[name="parameterKey"]').fill(parameter);
-      await variationForm.locator('select[name="campaignId"]').selectOption(campaign!.id);
+      await expect(variationForm.locator('select[name="campaignId"] option[value="' + campaign!.id + '"]')).toHaveCount(1, { timeout: 7000 });
+      await variationForm.locator('select[name="campaignId"]').selectOption(campaign!.id, { timeout: 7000 });
       await variationForm.locator('input[name="headline"]').fill(headlineV1);
       await variationForm.getByRole("button", { name: "Save draft variation" }).click();
       const variationCard = page.locator("section.settings-card").filter({ hasText: parameter });
