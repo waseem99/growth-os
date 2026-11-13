@@ -15,7 +15,10 @@ import { applyPublishedVariation } from "../../lib/campaign-variation";
 import { approvedCheckoutDestination } from "../../lib/checkout-destination";
 import { renderPublicMedia } from "../public-media";
 
-export const revalidate = 60;
+// Admin and Web are independently deployed. A variation publish, pause or
+// rollback must be visible on the next public request, not after ISR expiry.
+// The base-page DB lookup remains independently cached in brand-resolution.
+export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 type RouteProps = { params: Promise<{ slug: string[] }>; searchParams: SearchParams };
