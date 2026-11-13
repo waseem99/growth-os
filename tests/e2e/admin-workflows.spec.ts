@@ -173,8 +173,9 @@ test.describe("GrowthOS Admin operator acceptance (disposable CI database only)"
       await expect(page.locator('form:has(input[name="packageCode"])')).toHaveCount(0);
       await page.goto(admin + "/variations");
       await expect(page.locator('form:has(input[name="parameterKey"])')).toHaveCount(0);
-      const forbidden = await page.goto(admin + "/brands");
-      expect(forbidden?.status()).not.toBe(200);
+      await page.goto(admin + "/brands");
+      await expect(page).toHaveURL(admin + "/access-denied");
+      await expect(page.getByRole("heading", { name: /don't have permission/i })).toBeVisible();
       await page.goto(admin + "/analytics");
       await expect(page.locator("body")).toContainText(/analytics|performance|conversions/i);
     } finally {
