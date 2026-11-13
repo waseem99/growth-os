@@ -128,6 +128,7 @@ test.describe("GrowthOS Admin operator acceptance (disposable CI database only)"
       await variationV2.getByRole("button", { name: "Save new draft" }).click();
       await expect(variationV2).toContainText("Latest draft v2");
       await variationV2.getByRole("button", { name: "Publish latest version" }).click();
+      await expect(variationV2).toContainText("Public v2");
       await page.goto(campaignUrl);
       await expect(page.getByRole("heading", { level: 1 }).first()).toContainText(headlineV2);
 
