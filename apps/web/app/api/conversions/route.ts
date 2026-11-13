@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { and, eq, isNull, or } from "drizzle-orm";
 import {
-  conversions, conversionEventRules, conversionProviderDeliveries, getDatabase, integrations
+  conversions, conversionEventRules, conversionProviderDeliveries, getDatabase, integrations,
+  offerVersions, productPackages
 } from "@growth-os/db";
 import { conversionInputSchema } from "@growth-os/tracking";
 import { verifyTrackingContext } from "../../../lib/tracking-context";
@@ -61,6 +62,32 @@ export async function POST(request: Request) {
 
   const { db, client } = getDatabase();
   try {
+    // For paid packages, marketing cannot report arbitrary revenue. The
+    // product's verified charged amount must match the immutable approved
+    // package price and currency; a campaign price mismatch fails closed.
+    if (context.packageId && parsed.data.eventName !== "signup_complete") {
+      const [approved] = await db.select({
+        currency: offerVersions.currency,
+        initial: offerVersions.initialAmount,
+        recurring: offerVersions.recurringAmount
+      }).from(productPackages).innerJoin(offerVersions,
+        eq(offerVersions.id, productPackages.offerVersionId))
+        .where(and(eq(productPackages.id, context.packageId),
+          eq(productPackages.brandId, context.brandId))).limit(1);
+      const expected = approved ? Number(approved.recurring ?? approved.initial) : NaN;
+      const received = parsed.data.value;
+      if (!Number.isFinite(expected) || expected <= 0 ||
+          typeof received !== "number" || !Number.isFinite(received) ||
+          Math.round(expected * 100) !== Math.round(received * 100) ||
+          approved?.currency !== parsed.data.currency) {
+        logEvent("warn", "conversion_package_amount_rejected", {
+          correlationId: requestId, brandId: context.brandId,
+          pageId: context.pageId, packageId: context.packageId
+        });
+        return NextResponse.json({ error: "PACKAGE_AMOUNT_MISMATCH" }, { status: 400, headers });
+      }
+    }
+
     // Canonical conversion and provider delivery intent must commit atomically.
     // The outbox is NOT a delivery receipt; actual provider transport is disabled
     // until credentials, consent proof and staging verification are available.

@@ -138,6 +138,7 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
         if (context.packageId) url.searchParams.set("growthos_package_id", context.packageId);
         if (context.packageCode) url.searchParams.set("growthos_package_code", context.packageCode);
         if (context.variantId) url.searchParams.set("growthos_variant_id", context.variantId);
+        if (context.campaignId) url.searchParams.set("growthos_campaign_id", context.campaignId);
         url.searchParams.set("growthos_page_id", context.pageId);
         url.searchParams.set("growthos_version_id", context.versionId);
         url.searchParams.set("growthos_session_id", sessionId);
@@ -158,6 +159,16 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
         label: textLabel(target),
         href: target instanceof HTMLAnchorElement ? target.getAttribute("href") : null
       });
+      // The approved product checkout is a start, never a paid conversion.
+      if (target instanceof HTMLAnchorElement && approvedCheckout) {
+        try {
+          const targetUrl = new URL(target.href, window.location.href);
+          if (targetUrl.origin === approvedCheckout.origin &&
+              targetUrl.pathname === approvedCheckout.pathname) {
+            emit("checkout_start", { trigger: "approved_product_checkout", packageId: context.packageId ?? null });
+          }
+        } catch { /* Malformed links cannot trigger checkout starts. */ }
+      }
     };
 
     const seen = new Set<number>();
