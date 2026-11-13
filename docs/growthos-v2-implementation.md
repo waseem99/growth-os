@@ -27,7 +27,7 @@ The requested client URL is `/landing?utm=M&package=1&parameter=ranchers`. Each 
 
 ## Required next work before client acceptance
 
-- **Provider conversion event mapping and relay:** bind canonical `signup_complete`, `subscription_started`, `purchase` to allowed Meta/TikTok provider-specific successful events per product/package/source. Relay through approved provider APIs and reconcile duplicate browser/server events.
+- **Provider Test Events certification:** product/package/source event rules, a deduplicated outbox, hardened Meta/TikTok transport adapters and an authenticated retrying dispatcher are implemented but **off by default**. Verify real staging provider credentials, API receipts, privacy/consent and browser/server deduplication against actual product transactions before enabling any live sends.
 - **Product backend handoff:** each product checkout must validate package pricing and preserve the GrowthOS attribution context, then call `POST /api/conversions` with stable idempotency key, original campaign/page/version IDs, variation and package properties, value/currency, and first/last-touch data. GrowthOS **never processes payment itself**.
 - **Real staging:** connected Vercel scope currently cannot access the owner team for GrowthOS; linked Neon org is Vercel-managed and rejected creating an isolated staging project. Follow issue #52. Do not reuse current production Neon main.
 - **UAT/video:** on isolated staging, create a new product/page/package/banner variation entirely from the portal, preview, publish, visit exact Meta/TikTok links, verify actual product checkout/callback and provider events, test duplicates/invalid inputs, check roles, responsive layout, SEO, rollback and analytics. Record a walkthrough video and attach a test matrix.
@@ -63,7 +63,7 @@ The V2 branch now includes additional safeguards:
 - `/tracking-rules` configures product/optional-package mappings to provider-specific Meta `Subscribe`/`Purchase` and TikTok `Subscribe`/`CompletePayment` events. Each source has a separate rule. It stores **no tokens**.
 - Migration `0007_conversion_rules` adds product-scoped rules and triggers prohibiting cross-product offer and banner relationships; migration `0008_conversion_deliveries` adds the idempotent delivery ledger.
 - An authenticated product callback with `properties.marketingConsent === true`, `properties.testTraffic !== true`, enabled provider integration and matching enabled event rule creates a `pending` provider delivery intent in the **same database transaction** as the canonical conversion. Duplicates cannot enqueue again. No consent, disabled rule or QA traffic creates no provider delivery intent.
-- `/tracking-rules/deliveries` distinguishes `pending` from `delivered` provider events. **At this stage no Meta/TikTok server API transport is active.** A pending record is not a verified provider receipt.
+- `/tracking-rules/deliveries` distinguishes `pending` from `delivered` provider events. **Provider API transport code exists on this feature branch but remains disabled by default.** A pending record is not a verified provider receipt, and neither a mocked API response nor CI fixtures constitute successful live delivery.
 - The downstream product must affirm consent from its own trusted session/policy record; it must **not** merely echo an unsigned URL value.
 
 ### Recommended per-product server callback secrets
@@ -109,5 +109,5 @@ All UUID values shown above are placeholders for a real backend integration, not
 
 1. Correct Vercel team access and a **separate blank staging database**. Do not use the existing Neon production main. See issue #52.
 2. Connect and UAT at least one actual product staging checkout backend and callback. A simulated CI conversion does not prove a real transaction.
-3. Configure Meta and TikTok provider credentials through approved secret management, implement/verify the actual provider transport worker, retries, provider receipts and event deduplication. Current database records are pending intents only. See issue #53.
+3. Configure actual Meta and TikTok **staging** provider credentials through approved secret management; verify the already-implemented transport worker and bounded retries against provider Test Events receipts, callback deduplication and opt-in-only matching. The current queue is not proof of provider delivery. See issue #53.
 4. Run live browser/mobile UAT of brand creation, variation preview/publish, packages, event rules and rollback; capture tested URLs and a real screen-recording. Sign off staging before any production release.
