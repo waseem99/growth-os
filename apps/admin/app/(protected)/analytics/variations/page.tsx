@@ -21,7 +21,8 @@ export default async function VariationResultsPage() {
         checkoutStarts: sql<number>`count(*) filter (where ${analyticsEvents.eventName} = 'checkout_start')::int`
       }).from(analyticsEvents)
         .where(sql`${analyticsEvents.occurredAt} >= now() - interval '30 days'
-          AND ${analyticsEvents.properties}->>'variationId' IS NOT NULL`)
+          AND ${analyticsEvents.properties}->>'variationId' IS NOT NULL
+          AND coalesce(${analyticsEvents.properties}->>'testTraffic', 'false') <> 'true'`)
         .groupBy(analyticsEvents.brandId, sql`${analyticsEvents.properties}->>'variationId'`,
           sql`${analyticsEvents.properties}->>'packageCode'`, analyticsEvents.source),
       db.select({
@@ -42,10 +43,34 @@ export default async function VariationResultsPage() {
     const key = (brandId: string | null, variationId: string | null, pkg: string | null, source: string | null) =>
       `${brandId ?? ""}|${variationId ?? ""}|${pkg ?? ""}|${source ?? ""}`;
     const converted = new Map(conversionRows.map((row) => [key(row.brandId, row.variationId, row.packageCode, row.source), row.converted]));
-    const metrics = eventRows
-      .filter((row) => details.has(row.variationId) && details.get(row.variationId)?.brandId === row.brandId)
-      .map((row) => ({ ...row, variation: details.get(row.variationId)!,
-        conversions: converted.get(key(row.brandId, row.variationId, row.packageCode, row.source)) ?? 0 }));
+    // Full outer join: a verified product conversion may exist even if the
+    // browser's landing event was blocked by privacy controls. Both sides
+    // must be visible for accurate reconciliation; never show test traffic.
+    const metricsByKey = new Map<string, {
+      brandId: string; variationId: string; packageCode: string | null; source: string | null;
+      views: number; clicks: number; checkoutStarts: number; conversions: number;
+      variation: (typeof variationRows)[number];
+    }>();
+    for (const row of eventRows) {
+      const variation = details.get(row.variationId);
+      if (!variation || variation.brandId !== row.brandId) continue;
+      metricsByKey.set(key(row.brandId, row.variationId, row.packageCode, row.source), {
+        ...row, variation, conversions: 0
+      });
+    }
+    for (const row of conversionRows) {
+      const variation = details.get(row.variationId);
+      if (!variation || variation.brandId !== row.brandId) continue;
+      const id = key(row.brandId, row.variationId, row.packageCode, row.source);
+      const current = metricsByKey.get(id);
+      metricsByKey.set(id, current
+        ? { ...current, conversions: row.converted }
+        : { brandId: row.brandId, variationId: row.variationId, packageCode: row.packageCode,
+            source: row.source, views: 0, clicks: 0, checkoutStarts: 0,
+            conversions: row.converted, variation });
+    }
+    const metrics = [...metricsByKey.values()]
+      .sort((a, b) => b.conversions - a.conversions || b.views - a.views);
     return <main className="shell compact-shell">
       <section className="section-heading">
         <p className="eyebrow">Dynamic campaign performance</p>
