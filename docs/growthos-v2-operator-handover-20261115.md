@@ -9,7 +9,7 @@
 - Test renderer: [growth-os-web-cod-5.vercel.app](https://growth-os-web-cod-5.vercel.app), project `prj_RyNe7rXDoo3HjE4Pm13iEG3DSPTt`, root `apps/web`.
 - Both are in Vercel team `cod-5` and use the same **testing-only** Neon branch `br-soft-pine-b36ucy54` and migrations `0001–0008`. **Do not** connect them to original Neon `main` or any existing live brand alias.
 - Admin media: Vercel Blob linked; `BLOB_READ_WRITE_TOKEN` present in Admin environment. Do not copy the credential to Web or GitHub.
-- Current deployed test commit: `84521d5c2d122dbc32725bbc5544c6fc4e8737f8`; newer V2 changes are on draft PR #49 and must pass fresh CI and explicit review before a testing-only deployment.
+- Current deployed Cod4 test commit: `71e7aa963b4b555b7022c7cdba22cf318dab92b7` (Admin `dpl_FnhEoGq96VNno9G657nDg9MhzEhu`, Web `dpl_3xn3xtLFnHpM79uvTo6tTUjuJc5q`); earlier stable fallback SHA was `84521d5c2d122dbc32725bbc5544c6fc4e8737f8`. Latest V2 code SHA `bcdcbbc9f71bc5caa71b02234eff55d15f75ee53` passed full and focused CI before it was included in the Cod4 deploy merge.
 
 ## Operator-owned feature checklist
 
