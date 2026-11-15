@@ -18,6 +18,12 @@ type TrackingContext = {
   versionId: string;
   variantId?: string | null;
   experimentId?: string | null;
+  variationId?: string | null;
+  variationVersionId?: string | null;
+  checkoutUrl?: string | null;
+  packageId?: string | null;
+  packageCode?: string | null;
+  sourceOverride?: string | null;
   testTraffic?: boolean;
   defaultUtm?: Record<string, unknown> | null;
 };
@@ -68,7 +74,7 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
     const query = new URLSearchParams(window.location.search);
     const defaults = context.defaultUtm;
     const touch = attributionTouchFromQuery({
-      utm_source: query.get("utm_source") ?? stringDefault(defaults, "source"),
+      utm_source: context.sourceOverride ?? query.get("utm_source") ?? stringDefault(defaults, "source"),
       utm_medium: query.get("utm_medium") ?? stringDefault(defaults, "medium"),
       utm_campaign: query.get("utm_campaign") ?? stringDefault(defaults, "campaign"),
       utm_term: query.get("utm_term") ?? stringDefault(defaults, "term"),
@@ -82,7 +88,11 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
     const utm = eventUtmFields(attribution);
     const experimentProperties = {
       experimentId: context.experimentId ?? null,
-      testTraffic: context.testTraffic === true
+      testTraffic: context.testTraffic === true,
+      variationId: context.variationId ?? null,
+      variationVersionId: context.variationVersionId ?? null,
+      packageId: context.packageId ?? null,
+      packageCode: context.packageCode ?? null
     };
 
     const emit = (eventName: AnalyticsEventInput["eventName"], properties: Record<string, unknown> = {}) => send({
@@ -105,12 +115,17 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
       properties: { ...properties, ...experimentProperties, firstTouch: attribution.firstTouch, lastTouch: attribution.lastTouch }
     });
 
+    // Do not leak campaign/session identifiers to arbitrary external destinations.
+    // Only the administrator-approved product checkout may receive this context.
+    const approvedCheckout = context.checkoutUrl ? new URL(context.checkoutUrl) : null;
     for (const anchor of document.querySelectorAll<HTMLAnchorElement>("a[href]")) {
       const raw = anchor.getAttribute("href");
       if (!raw || raw.startsWith("#") || raw.startsWith("mailto:") || raw.startsWith("tel:") || raw.startsWith("javascript:")) continue;
       try {
         const url = new URL(raw, window.location.href);
         if (!/^https?:$/.test(url.protocol)) continue;
+        if (!approvedCheckout || url.origin !== approvedCheckout.origin ||
+          url.pathname !== approvedCheckout.pathname) continue;
         if (utm.source && !url.searchParams.has("utm_source")) url.searchParams.set("utm_source", utm.source);
         if (utm.medium && !url.searchParams.has("utm_medium")) url.searchParams.set("utm_medium", utm.medium);
         if (utm.campaignName && !url.searchParams.has("utm_campaign")) url.searchParams.set("utm_campaign", utm.campaignName);
@@ -118,7 +133,12 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
         if (utm.content && !url.searchParams.has("utm_content")) url.searchParams.set("utm_content", utm.content);
         if (utm.creativeId && !url.searchParams.has("creative_id")) url.searchParams.set("creative_id", utm.creativeId);
         if (context.experimentId) url.searchParams.set("growthos_experiment_id", context.experimentId);
+        if (context.variationId) url.searchParams.set("growthos_variation_id", context.variationId);
+        if (context.variationVersionId) url.searchParams.set("growthos_variation_version_id", context.variationVersionId);
+        if (context.packageId) url.searchParams.set("growthos_package_id", context.packageId);
+        if (context.packageCode) url.searchParams.set("growthos_package_code", context.packageCode);
         if (context.variantId) url.searchParams.set("growthos_variant_id", context.variantId);
+        if (context.campaignId) url.searchParams.set("growthos_campaign_id", context.campaignId);
         url.searchParams.set("growthos_page_id", context.pageId);
         url.searchParams.set("growthos_version_id", context.versionId);
         url.searchParams.set("growthos_session_id", sessionId);
@@ -139,6 +159,16 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
         label: textLabel(target),
         href: target instanceof HTMLAnchorElement ? target.getAttribute("href") : null
       });
+      // The approved product checkout is a start, never a paid conversion.
+      if (target instanceof HTMLAnchorElement && approvedCheckout) {
+        try {
+          const targetUrl = new URL(target.href, window.location.href);
+          if (targetUrl.origin === approvedCheckout.origin &&
+              targetUrl.pathname === approvedCheckout.pathname) {
+            emit("checkout_start", { trigger: "approved_product_checkout", packageId: context.packageId ?? null });
+          }
+        } catch { /* Malformed links cannot trigger checkout starts. */ }
+      }
     };
 
     const seen = new Set<number>();
@@ -188,7 +218,7 @@ export function GrowthTracker({ context }: { context: TrackingContext }) {
       document.removeEventListener("ended", video, true);
       window.removeEventListener("growthos:event", custom);
     };
-  }, [context.brandId, context.campaignId, context.defaultUtm, context.experimentId, context.pageId, context.testTraffic, context.variantId, context.versionId]);
+  }, [context.brandId, context.campaignId, context.defaultUtm, context.experimentId, context.pageId, context.testTraffic, context.variantId, context.versionId, context.variationId, context.variationVersionId, context.checkoutUrl, context.packageId, context.packageCode, context.sourceOverride]);
 
   return null;
 }

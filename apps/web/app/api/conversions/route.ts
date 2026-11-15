@@ -1,25 +1,31 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { conversions, getDatabase } from "@growth-os/db";
+import { and, eq, isNull, or } from "drizzle-orm";
+import {
+  conversions, conversionEventRules, conversionProviderDeliveries, getDatabase, integrations,
+  offerVersions, productPackages
+} from "@growth-os/db";
 import { conversionInputSchema } from "@growth-os/tracking";
 import { verifyTrackingContext } from "../../../lib/tracking-context";
+import { deliveryPayload, deliveryProvider, sanitizeProviderMatch } from "../../../lib/conversion-delivery";
+import { conversionTokenMatchesBrand, earlyConversionTokenAccepted, hasConversionSecretConfig } from "../../../lib/conversion-auth";
 import { checkRateLimit, clientAddress, correlationId, logEvent, rateLimitHeaders, reportError } from "../../../lib/operability";
 
 export const runtime = "nodejs";
 
+function bearerToken(request: Request) {
+  const raw = request.headers.get("authorization") ?? "";
+  const match = /^Bearer\s+([^\s]+)$/i.exec(raw);
+  return match?.[1] ?? "";
+}
+
 function authorized(request: Request) {
-  const secret = process.env.CONVERSION_INGEST_SECRET;
-  const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  if (!secret || !supplied) return false;
-  const expected = Buffer.from(secret);
-  const actual = Buffer.from(supplied);
-  return expected.length === actual.length && timingSafeEqual(expected, actual);
+  return earlyConversionTokenAccepted(bearerToken(request), process.env);
 }
 
 export async function POST(request: Request) {
   const requestId = correlationId(request);
   const baseHeaders = { "x-request-id": requestId };
-  if (!process.env.CONVERSION_INGEST_SECRET) return NextResponse.json({ error: "INGEST_NOT_CONFIGURED" }, { status: 503, headers: baseHeaders });
+  if (!hasConversionSecretConfig(process.env)) return NextResponse.json({ error: "INGEST_NOT_CONFIGURED" }, { status: 503, headers: baseHeaders });
   if (!authorized(request)) {
     logEvent("warn", "conversion_auth_rejected", { correlationId: requestId });
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401, headers: baseHeaders });
@@ -44,29 +50,140 @@ export async function POST(request: Request) {
   const parsed = conversionInputSchema.safeParse(payload);
   if (!parsed.success) return NextResponse.json({ error: "INVALID_CONVERSION", issues: parsed.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })) }, { status: 400, headers });
 
+  // A product-scoped credential overrides the legacy shared token. This check
+  // happens before any callback is attributed to a product or stored.
+  if (!conversionTokenMatchesBrand(bearerToken(request), parsed.data.brandId, process.env)) {
+    logEvent("warn", "conversion_product_auth_rejected", { correlationId: requestId });
+    return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401, headers });
+  }
+
   const context = await verifyTrackingContext(parsed.data);
   if (!context) return NextResponse.json({ error: "INVALID_CONTEXT" }, { status: 400, headers });
 
   const { db, client } = getDatabase();
   try {
-    const [inserted] = await db.insert(conversions).values({
-      idempotencyKey: parsed.data.idempotencyKey,
-      eventName: parsed.data.eventName,
-      occurredAt: new Date(parsed.data.occurredAt),
-      brandId: context.brandId,
-      campaignId: context.campaignId,
-      pageId: context.pageId,
-      variantId: context.variantId,
-      sessionId: parsed.data.sessionId ?? null,
-      value: parsed.data.value == null ? null : String(parsed.data.value),
-      currency: parsed.data.currency ?? null,
-      attribution: parsed.data.attribution,
-      properties: { ...parsed.data.properties, versionId: context.versionId }
-    }).onConflictDoNothing({ target: conversions.idempotencyKey }).returning({ id: conversions.id });
-    logEvent("info", "conversion_accepted", { correlationId: requestId, eventName: parsed.data.eventName, duplicate: !inserted, pageId: context.pageId });
-    return NextResponse.json({ accepted: true, duplicate: !inserted }, { status: inserted ? 201 : 200, headers });
+    // For paid packages, marketing cannot report arbitrary revenue. The
+    // product's verified charged amount must match the immutable approved
+    // package price and currency; a campaign price mismatch fails closed.
+    if (context.packageId && parsed.data.eventName !== "signup_complete") {
+      const [approved] = await db.select({
+        currency: offerVersions.currency,
+        initial: offerVersions.initialAmount,
+        recurring: offerVersions.recurringAmount
+      }).from(productPackages).innerJoin(offerVersions,
+        eq(offerVersions.id, productPackages.offerVersionId))
+        .where(and(eq(productPackages.id, context.packageId),
+          eq(productPackages.brandId, context.brandId))).limit(1);
+      const expected = approved ? Number(approved.recurring ?? approved.initial) : NaN;
+      const received = parsed.data.value;
+      if (!Number.isFinite(expected) || expected <= 0 ||
+          typeof received !== "number" || !Number.isFinite(received) ||
+          Math.round(expected * 100) !== Math.round(received * 100) ||
+          approved?.currency !== parsed.data.currency) {
+        logEvent("warn", "conversion_package_amount_rejected", {
+          correlationId: requestId, brandId: context.brandId,
+          pageId: context.pageId, packageId: context.packageId
+        });
+        return NextResponse.json({ error: "PACKAGE_AMOUNT_MISMATCH" }, { status: 400, headers });
+      }
+    }
+
+    // Canonical conversion and provider delivery intent must commit atomically.
+    // The outbox is NOT a delivery receipt; actual provider transport is disabled
+    // until credentials, consent proof and staging verification are available.
+    const provider = deliveryProvider({
+      source: parsed.data.attribution.lastTouch?.source ?? parsed.data.attribution.firstTouch?.source,
+      marketingConsent: parsed.data.properties.marketingConsent,
+      testTraffic: parsed.data.properties.testTraffic
+    });
+    // A consent flag alone is not enough for a sendable provider event.
+    // Preserve the confirmed conversion, but do not enqueue a doomed
+    // provider delivery without validated matching signals.
+    const matching = provider ? sanitizeProviderMatch(parsed.data.properties.providerMatching) : null;
+    const safeProperties = Object.fromEntries(
+      Object.entries(parsed.data.properties).filter(([key]) => key !== "providerMatching")
+    );
+    const inserted = await db.transaction(async (tx) => {
+      const [saved] = await tx.insert(conversions).values({
+        idempotencyKey: parsed.data.idempotencyKey,
+        eventName: parsed.data.eventName,
+        occurredAt: new Date(parsed.data.occurredAt),
+        brandId: context.brandId,
+        campaignId: context.campaignId,
+        pageId: context.pageId,
+        variantId: context.variantId,
+        sessionId: parsed.data.sessionId ?? null,
+        value: parsed.data.value == null ? null : String(parsed.data.value),
+        currency: parsed.data.currency ?? null,
+        attribution: parsed.data.attribution,
+        properties: {
+          ...safeProperties, versionId: context.versionId,
+          variationId: context.variationId, packageId: context.packageId,
+          packageCode: context.packageCode
+        }
+      }).onConflictDoNothing({ target: conversions.idempotencyKey }).returning({ id: conversions.id });
+      if (!saved) return false;
+
+      if (provider && matching) {
+        const eligiblePackages = context.packageId
+          ? or(isNull(conversionEventRules.packageId), eq(conversionEventRules.packageId, context.packageId))
+          : isNull(conversionEventRules.packageId);
+        const [rules, providerIntegration] = await Promise.all([
+          tx.select({
+            packageId: conversionEventRules.packageId,
+            providerEvent: conversionEventRules.providerEvent
+          }).from(conversionEventRules).where(and(
+            eq(conversionEventRules.brandId, context.brandId),
+            eq(conversionEventRules.provider, provider),
+            eq(conversionEventRules.canonicalEvent, parsed.data.eventName),
+            eq(conversionEventRules.status, "enabled"),
+            eligiblePackages
+          )),
+          tx.select({ id: integrations.id }).from(integrations).where(and(
+            eq(integrations.brandId, context.brandId),
+            eq(integrations.provider, provider),
+            eq(integrations.status, "enabled")
+          )).limit(1)
+        ]);
+        const configuredRule = rules.find((item) => item.packageId === context.packageId)
+          ?? rules.find((item) => item.packageId === null);
+        if (configuredRule && providerIntegration.length) {
+          const payload = deliveryPayload({
+            conversionId: saved.id,
+            providerEvent: configuredRule.providerEvent,
+            occurredAt: parsed.data.occurredAt,
+            value: parsed.data.value ?? null,
+            currency: parsed.data.currency ?? null,
+            pageId: context.pageId,
+            variationId: context.variationId,
+            packageCode: context.packageCode,
+            matching
+          });
+          await tx.insert(conversionProviderDeliveries).values({
+            conversionId: saved.id,
+            brandId: context.brandId,
+            provider,
+            providerEvent: configuredRule.providerEvent,
+            providerEventId: payload.event_id,
+            payload
+          }).onConflictDoNothing({
+            target: [conversionProviderDeliveries.conversionId, conversionProviderDeliveries.provider]
+          });
+        }
+      }
+      return true;
+    });
+    logEvent("info", "conversion_accepted", {
+      correlationId: requestId, eventName: parsed.data.eventName,
+      duplicate: !inserted, pageId: context.pageId
+    });
+    return NextResponse.json({ accepted: true, duplicate: !inserted }, {
+      status: inserted ? 201 : 200, headers
+    });
   } catch (error) {
-    await reportError("conversion_ingest_failed", error, { correlationId: requestId, eventName: parsed.data.eventName, pageId: context.pageId });
+    await reportError("conversion_ingest_failed", error, {
+      correlationId: requestId, eventName: parsed.data.eventName, pageId: context.pageId
+    });
     return NextResponse.json({ error: "INGEST_FAILED" }, { status: 503, headers });
   } finally {
     await client.end();

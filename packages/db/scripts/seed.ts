@@ -8,7 +8,12 @@ const ids = {
   user: "00000000-0000-4000-8000-000000000001",
   skillupBrand: "00000000-0000-4000-8000-000000000010", skillupDomain: "00000000-0000-4000-8000-000000000011",
   skillupOffer: "00000000-0000-4000-8000-000000000020", skillupOfferVersion: "00000000-0000-4000-8000-000000000021",
-  skillupCampaign: "00000000-0000-4000-8000-000000000030", skillupTemplate: "00000000-0000-4000-8000-000000000040",
+  skillupCampaign: "00000000-0000-4000-8000-000000000030",
+  skillupCampaignOffer: "00000000-0000-4000-8000-000000000022",
+  skillupCampaignOfferVersion: "00000000-0000-4000-8000-000000000023",
+  skillupCampaignPackage: "00000000-0000-4000-8000-000000000024",
+  skillupRanchersVariation: "00000000-0000-4000-8000-000000000025",
+  skillupRanchersVariationVersion: "00000000-0000-4000-8000-000000000026", skillupTemplate: "00000000-0000-4000-8000-000000000040",
   skillupPage: "00000000-0000-4000-8000-000000000050", skillupPageVersion: "00000000-0000-4000-8000-000000000051", skillupPageVersionB: "00000000-0000-4000-8000-000000000052",
   skillupExperiment: "00000000-0000-4000-8000-000000000900", skillupVariantControl: "00000000-0000-4000-8000-000000000901", skillupVariantB: "00000000-0000-4000-8000-000000000902",
   jalwaBrand: "00000000-0000-4000-8000-000000000110", jalwaDomain: "00000000-0000-4000-8000-000000000111",
@@ -82,6 +87,27 @@ try {
     await tx`INSERT INTO page_versions (id, page_id, offer_version_id, version_number, schema_version, content, seo, publish_note, created_by) VALUES (${ids.skillupPageVersionB}, ${ids.skillupPage}, ${ids.skillupOfferVersion}, 2, 1, ${tx.json(skillupDocumentB)}, ${tx.json(skillupSeoB)}, 'Seed experiment variant', ${ids.user}) ON CONFLICT (page_id, version_number) DO UPDATE SET content=EXCLUDED.content, seo=EXCLUDED.seo`;
     await tx`INSERT INTO page_publications (page_id, version_id, published_by) VALUES (${ids.skillupPage}, ${ids.skillupPageVersion}, ${ids.user}) ON CONFLICT (page_id) DO UPDATE SET version_id=EXCLUDED.version_id, published_at=now(), published_by=EXCLUDED.published_by`;
 
+    // Disposable V2 fixture: product-specific package and deterministic banner parameter.
+    // No production seeding is allowed by the existing seed protection.
+    await tx`INSERT INTO offers (id, brand_id, name, slug)
+      VALUES (${ids.skillupCampaignOffer}, ${ids.skillupBrand}, 'Ranchers Single Purchase', 'ranchers-package-1')
+      ON CONFLICT (id) DO NOTHING`;
+    await tx`INSERT INTO offer_versions (id, offer_id, version_number, currency, initial_amount, created_by)
+      VALUES (${ids.skillupCampaignOfferVersion}, ${ids.skillupCampaignOffer}, 1, 'PKR', 566, ${ids.user})
+      ON CONFLICT (id) DO NOTHING`;
+    await tx`INSERT INTO product_packages (id, brand_id, package_code, offer_version_id, status, created_by)
+      VALUES (${ids.skillupCampaignPackage}, ${ids.skillupBrand}, '1', ${ids.skillupCampaignOfferVersion}, 'active', ${ids.user})
+      ON CONFLICT (id) DO UPDATE SET status='active'`;
+    await tx`INSERT INTO landing_variations (id, brand_id, page_id, campaign_id, parameter_key, status, created_by)
+      VALUES (${ids.skillupRanchersVariation}, ${ids.skillupBrand}, ${ids.skillupPage}, ${ids.skillupCampaign}, 'ranchers', 'active', ${ids.user})
+      ON CONFLICT (id) DO UPDATE SET status='active'`;
+    await tx`INSERT INTO landing_variation_versions (id, variation_id, version_number, copy_overrides, created_by)
+      VALUES (${ids.skillupRanchersVariationVersion}, ${ids.skillupRanchersVariation}, 1,
+        ${tx.json({ headline: "Ranchers acquisition campaign", subheadline: "Approved product campaign creative selected by URL." })}, ${ids.user})
+      ON CONFLICT (id) DO NOTHING`;
+    await tx`INSERT INTO landing_variation_publications (variation_id, version_id, published_by)
+      VALUES (${ids.skillupRanchersVariation}, ${ids.skillupRanchersVariationVersion}, ${ids.user})
+      ON CONFLICT (variation_id) DO UPDATE SET version_id=EXCLUDED.version_id, published_at=now()`;
     await tx`INSERT INTO experiments (id, page_id, campaign_id, name, status, starts_at) VALUES (${ids.skillupExperiment}, ${ids.skillupPage}, ${ids.skillupCampaign}, 'SkillUp Seed Experiment', 'paused', now() - interval '1 day') ON CONFLICT (id) DO UPDATE SET status='paused'`;
     await tx`INSERT INTO variants (id, experiment_id, page_version_id, name, allocation, is_control) VALUES (${ids.skillupVariantControl}, ${ids.skillupExperiment}, ${ids.skillupPageVersion}, 'Control', 50, true) ON CONFLICT (id) DO UPDATE SET allocation=50, is_control=true`;
     await tx`INSERT INTO variants (id, experiment_id, page_version_id, name, allocation, is_control) VALUES (${ids.skillupVariantB}, ${ids.skillupExperiment}, ${ids.skillupPageVersionB}, 'Faster skills angle', 50, false) ON CONFLICT (id) DO UPDATE SET allocation=50, is_control=false`;

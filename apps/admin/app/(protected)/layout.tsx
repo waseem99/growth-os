@@ -19,6 +19,8 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
         <nav aria-label="Admin navigation">
           <Link href="/">Overview</Link>
           {canManageCampaigns && <Link href="/campaigns">Campaigns</Link>}
+          {canManageCampaigns && <Link href="/packages">Packages</Link>}
+          <Link href="/variations">Variations</Link>
           <Link href="/assets">Ad Creative</Link>
           <Link href="/pages">Landing Pages</Link>
           {canViewAnalytics && <Link href="/analytics">Results</Link>}
@@ -26,9 +28,11 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
             <summary>More</summary>
             <div className="nav-more-menu">
               {canViewAnalytics && <Link href="/experiments">Experiments</Link>}
+              {canViewAnalytics && <Link href="/analytics/variations">Variation Results</Link>}
               {canUseAi && <Link href="/ai">AI Assistant</Link>}
               {isAdmin && <Link href="/brands">Products & Domains</Link>}
               {canManageIntegrations && <Link href="/integrations">Integrations</Link>}
+              {canManageIntegrations && <Link href="/tracking-rules">Conversion Rules</Link>}
               {isAdmin && <Link href="/users">Users</Link>}
               {isAdmin && <Link href="/audit">Audit Log</Link>}
             </div>
