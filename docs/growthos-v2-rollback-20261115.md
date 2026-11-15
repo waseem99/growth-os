@@ -20,7 +20,7 @@ SELECT current_database(), current_schema();
 
 1. **Stop traffic promotion**, revoke any unreviewed feature flags or provider dispatch toggles. Never enable paid Meta/TikTok sends to debug a broken rollout.
 2. In **Vercel → Cod4 → growth-os-admin → Deployments**, choose the previous known-good **Production-target** deployment and promote/rollback it. Repeat for `growth-os-web`. Do not promote an unrelated Preview build with different env variables.
-3. Current last-recorded stable baseline for the Cod4 test rollout was deployed from Git SHA `84521d5c2d122dbc32725bbc5544c6fc4e8737f8`; verify its corresponding IDs in Vercel because a later deployment might replace them.
+3. Current Cod4 test deployments were promoted at SHA `71e7aa963b4b555b7022c7cdba22cf318dab92b7` (Admin `dpl_FnhEoGq96VNno9G657nDg9MhzEhu`, Web `dpl_3xn3xtLFnHpM79uvTo6tTUjuJc5q`), both READY on 15 Nov. Earlier known-good fallback SHA `84521d5c2d122dbc32725bbc5544c6fc4e8737f8` is available from earlier deployments; verify its precise READY deployment IDs in Vercel before rollback. Do not assume those are active aliases.
 4. Re-run both health routes, Owner login, BizB `/sell`, safe invalid-package/UTM cases and a **test-only** conversion callback. Confirm no provider dispatch or new real revenue. Keep the project protected by Vercel Authentication.
 5. If automatic Git integration keeps deploying the wrong code, restore the operator-approved branch/ref under a reviewed PR and verify the Vercel production-branch and Ignored Build Step settings. **Do not force-push GitHub `main`**; its history is a separate release boundary.
 
