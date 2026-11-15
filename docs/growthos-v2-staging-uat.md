@@ -3,10 +3,13 @@
 **Owner:** GrowthOS engineering / product owner
 **Tracking:** https://github.com/waseem99/growth-os/issues/48
 **Release candidate:** Draft PR https://github.com/waseem99/growth-os/pull/49
-**Environment blocker:** https://github.com/waseem99/growth-os/issues/52
-**External conversions:** https://github.com/waseem99/growth-os/issues/53
+**Cod 4 test environment:** https://growth-os-admin-cod-5.vercel.app and https://growth-os-web-cod-5.vercel.app
+**Remaining release controls:** https://github.com/waseem99/growth-os/issues/54
+**Product/provider acceptance:** https://github.com/waseem99/growth-os/issues/53
 
-This plan is a release gate, **not proof that staging exists**. The current connected Vercel account has no access to the GrowthOS-owning team, and the existing Neon main is production. Until an authorized owner provisions isolation, the GitHub CI database is the only tested environment.
+**Updated 2026-11-15:** The user confirmed that GrowthOS currently operates as a **test-only project** (not a separate production rollout). Authorized Vercel team `cod-5` now has distinct Admin/Web projects, both on deploy SHA `84521d5c2d122dbc32725bbc5544c6fc4e8737f8`. Their health routes pass and the BizB test landing renders. A separate Neon **branch** `br-soft-pine-b36ucy54` contains migrations 0001–0008; the original `main` remains at 0005. **Important:** This branch was cloned from the existing parent, not created as an empty sanitized database, so any broader QA involving personal records requires data-access review. Vercel Blob is attached, but a live authenticated asset-upload/registration receipt has not been produced. Owner sign-in and route access were exercised; Analyst role tests, asset uploads and full campaign workflows are proven in disposable CI only where explicitly noted.
+
+This document remains a **release gate**, not a blanket claim of commercial/provider acceptance. The old Vercel-team access problem in Issue #52 was worked around in Cod 4; the release-blocking items are explicitly tracked in #53 and #54.
 
 ## 1. Infrastructure owner checklist (required before browser UAT)
 
