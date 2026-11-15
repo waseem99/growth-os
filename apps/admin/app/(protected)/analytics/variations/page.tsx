@@ -42,7 +42,6 @@ export default async function VariationResultsPage() {
     const details = new Map(variationRows.map((variation) => [variation.id, variation]));
     const key = (brandId: string | null, variationId: string | null, pkg: string | null, source: string | null) =>
       `${brandId ?? ""}|${variationId ?? ""}|${pkg ?? ""}|${source ?? ""}`;
-    const converted = new Map(conversionRows.map((row) => [key(row.brandId, row.variationId, row.packageCode, row.source), row.converted]));
     // Full outer join: a verified product conversion may exist even if the
     // browser's landing event was blocked by privacy controls. Both sides
     // must be visible for accurate reconciliation; never show test traffic.
