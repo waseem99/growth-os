@@ -54,7 +54,7 @@ export default async function VariationResultsPage() {
       const variation = details.get(row.variationId);
       if (!variation || variation.brandId !== row.brandId) continue;
       metricsByKey.set(key(row.brandId, row.variationId, row.packageCode, row.source), {
-        ...row, variation, conversions: 0
+        ...row, brandId: variation.brandId, variation, conversions: 0
       });
     }
     for (const row of conversionRows) {
@@ -64,7 +64,7 @@ export default async function VariationResultsPage() {
       const current = metricsByKey.get(id);
       metricsByKey.set(id, current
         ? { ...current, conversions: row.converted }
-        : { brandId: row.brandId, variationId: row.variationId, packageCode: row.packageCode,
+        : { brandId: variation.brandId, variationId: row.variationId, packageCode: row.packageCode,
             source: row.source, views: 0, clicks: 0, checkoutStarts: 0,
             conversions: row.converted, variation });
     }
