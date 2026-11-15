@@ -9,7 +9,7 @@
 | GitHub source | [waseem99/growth-os](https://github.com/waseem99/growth-os) |
 | Production/default Git `main` | `660b7fb270712bdc75681a3469cbe69439b5f8a1`, **not merged, not protected** |
 | V2 feature | [draft PR #49](https://github.com/waseem99/growth-os/pull/49); includes the dependency patch history from security [draft PR #51](https://github.com/waseem99/growth-os/pull/51) |
-| Deploy branch | `deploy/cod4-growthos-20261113`, deployed SHA `84521d5c2d122dbc32725bbc5544c6fc4e8737f8` |
+| Deploy branch | `deploy/cod4-growthos-20261113`, current Cod4 deployed SHA `71e7aa963b4b555b7022c7cdba22cf318dab92b7` (prior known-good baseline `84521d5c2d122dbc32725bbc5544c6fc4e8737f8`) |
 | Test team | Vercel Cod 4 / `cod-5` |
 | Admin project | `prj_1t1v7A0qzQ4AY9IcRwVUwyn6MKVZ`; https://growth-os-admin-cod-5.vercel.app |
 | Web project | `prj_RyNe7rXDoo3HjE4Pm13iEG3DSPTt`; https://growth-os-web-cod-5.vercel.app |
@@ -36,11 +36,11 @@
 | Deployed conversion count | **PASS, no false revenue** | 1 test-only `signup_complete`; `testTraffic=true`; `value=NULL`; zero provider deliveries; reportable revenue = 0 |
 | Meta/TikTok provider callbacks | **NOT VERIFIED** | Transport implemented and disabled; actual provider Test Events receipts not provided |
 | Analytics aggregate/date report | **PASS in prior CI** | Fixed PostgreSQL Date serialization; typed filters and role access |
-| Variation analytics reconciliation | **New feature-branch validation** | Exclude test-traffic events; display conversion-only records when browser landing view absent; dedicated E2E regression added |
+| Variation analytics reconciliation | **PASS, deployed on Cod4** | Synthetic event exclusion and conversion-only display verified by a dedicated disposable-DB E2E (23 total Playwright tests); see [run 43725641415](https://github.com/waseem99/growth-os/actions/runs/43725641415) |
 | Mobile/performance | **PASS on prior feature SHA** | [run 43455013089](https://github.com/waseem99/growth-os/actions/runs/43455013089): Lighthouse performance 99, accessibility 100, SEO 100, TBT 44 ms |
 | Main GitHub protection | **BLOCKED on connector permissions** | `GET /rulesets` returned `[]`, `main.protected=false`; repository admin must enable an active ruleset |
 
-**Evidence discipline:** The final new variation-analytics CI result must be recorded against its *exact feature SHA* before this change is considered accepted. Never substitute the previously green run from a different SHA. The seeded CI stores synthetic conversions and tests approval boundaries, not a paid financial receipt.
+**15 Nov exact-SHA code verification:** Feature `bcdcbbc9f71bc5caa71b02234eff55d15f75ee53` passed [full CI 43725641415](https://github.com/waseem99/growth-os/actions/runs/43725641415) (23 Playwright tests, audit, migrations, build, Lighthouse P98/A100/SEO100, TBT 142 ms) and [focused checks 43725641382](https://github.com/waseem99/growth-os/actions/runs/43725641382). It was merged into the Cod4 deploy branch at SHA `71e7aa963b4b555b7022c7cdba22cf318dab92b7` while preserving the test-only Vercel alias file. Cod4 Admin deployment `dpl_FnhEoGq96VNno9G657nDg9MhzEhu` and Web `dpl_3xn3xtLFnHpM79uvTo6tTUjuJc5q` are READY. Both stable health URLs returned 200, `/sell` and `?utm=M` 200, unknown packages and duplicate UTM 404, and neither deployment produced error/fatal logs in the 20-minute inspection. The seeded CI stores synthetic conversions, not a paid financial receipt.
 
 ## 3. Analytics reconciliation
 
